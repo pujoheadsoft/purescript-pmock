@@ -433,27 +433,6 @@ anyV a = Param {v: a, matcher: Just anyMatcher}
 matcher :: forall a. (a -> Boolean) -> String -> Param a
 matcher f m = Param {v: unsafeCoerce m, matcher: Just (\_ a -> f a)}
 
-cc = any :: Param Int
-
-dd :: Cons (Param String) (Cons (Param Int) (Param Boolean))
-dd = param "a" #> param 1 #> param true
-
-dd2 :: Cons (Param String) (Cons (Param Int) (Cons (Param Boolean) (Param String)))
-dd2 = param "a" #> param 1 #> param true #> param "b"
-
-ee :: Cons (Param String) (Param Int)
-ee = "a" :> 1
-
-ff :: Cons (Param String) (Cons (Param Int) (Param Boolean))
-ff = "a" :> 1 :> true
-
-gg :: Cons (Param String) (Cons (Param Int) (Cons (Param Boolean) (Param String)))
-gg = "a" :> 1 :> true :> "b"
-
-
-hh :: Cons (Param String) (Cons (Param Int) (Param Boolean))
-hh = anyV "a" :> anyV 1 :> anyV true
-
 type TryCatchResult r = {
   hasError :: Boolean,
   error :: String,

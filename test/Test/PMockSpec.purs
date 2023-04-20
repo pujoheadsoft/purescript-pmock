@@ -25,33 +25,33 @@ type Fixture mock r m = {
 -- mock test template
 mockTest :: forall mock m g r. Monad m => Eq r => Show r => MonadError Error g => Fixture mock r g -> SpecT g Unit m Unit
 mockTest f = describe f.name do
-  it "設定した引数で実行すると設定した値を返すことができる" do
+  it "Returns a set value when called with a set argument." do
     let m = f.create unit
     f.execute m `shouldEqual` f.expected
 
-  it "設定した引数で実行しないと失敗する" do
+  it "Failure to call with set arguments." do
     case f.executeFailed of
       Just func -> let m = f.create unit
         in expectError $ runRuntimeThrowableFunction (\_ -> func m)
       Nothing -> pure unit
 
-  it "指定した引数で呼び出されたかどうかを検証できる" do
+  it "Verify that the call was made with the set arguments." do
     let 
       m = f.create unit
       _ = f.execute m
     f.verifyMock m
 
-  it "指定した引数で呼び出されていない場合は検証に失敗する" do
+  it "Verify fails if the call is made with arguments different from those set." do
     let 
       m = f.create unit
       _ = f.execute m
     expectError $ f.verifyFailed m
 
-  it "指定した引数で呼び出された回数を検証できる(0回)" do
+  it "Verify the number of times it has been called with the set arguments (0 times)." do
     let m = f.create unit
     f.verifyCount m 0
 
-  it "指定した引数で呼び出された回数を検証できる(複数回)" do
+  it "Verify the number of times it has been called with the set arguments (3 times)." do
     let 
       m = f.create unit
       _ = f.execute m
@@ -61,11 +61,11 @@ mockTest f = describe f.name do
 
 spec :: Spec Unit
 spec = do
-  describe "PMockのテスト" do
-    describe "Single Mock" do
+  describe "PMock Test" do
+    describe "Single calles" do
 
       mockTest {
-        name: "引数が1つの場合", 
+        name: "1 argument", 
         create: \_ -> mock $ "1" :> 1,
         expected: 1, 
         execute: \m -> m.fun "1",
@@ -76,7 +76,7 @@ spec = do
       }
 
       mockTest {
-        name: "引数が2つの場合", 
+        name: "2 arguments", 
         create: \_ -> mock $ 100 :> "1" :> true,
         expected: true, 
         execute: \m -> m.fun 100 "1",
@@ -87,7 +87,7 @@ spec = do
       }
 
       mockTest {
-        name: "引数が3つの場合", 
+        name: "3 arguments", 
         create: \_ -> mock $ 100 :> "1" :> true :> 11.1,
         expected: 11.1, 
         execute: \m -> m.fun 100 "1" true,
@@ -98,7 +98,7 @@ spec = do
       }
 
       mockTest {
-        name: "引数が4つの場合", 
+        name: "4 arguments", 
         create: \_ -> mock $ 100 :> "1" :> true :> 11.1 :> [1, 2],
         expected: [1, 2], 
         execute: \m -> m.fun 100 "1" true 11.1,
@@ -109,7 +109,7 @@ spec = do
       }
 
       mockTest {
-        name: "引数が5つの場合", 
+        name: "5 arguments", 
         create: \_ -> mock $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"},
         expected: {name: "Name"}, 
         execute: \m -> m.fun 100 "1" true 11.1 [1, 2],
@@ -120,7 +120,7 @@ spec = do
       }
 
       mockTest {
-        name: "引数が6つの場合", 
+        name: "6 arguments", 
         create: \_ -> mock $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20,
         expected: 20, 
         execute: \m -> m.fun 100 "1" true 11.1 [1, 2] {name: "Name"},
@@ -131,7 +131,7 @@ spec = do
       }
 
       mockTest {
-        name: "引数が7つの場合", 
+        name: "7 arguments", 
         create: \_ -> mock $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X",
         expected: "X", 
         execute: \m -> m.fun 100 "1" true 11.1 [1, 2] {name: "Name"} 20,
@@ -142,7 +142,7 @@ spec = do
       }
 
       mockTest {
-        name: "引数が8つの場合", 
+        name: "8 arguments", 
         create: \_ -> mock $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X" :> false,
         expected: false, 
         execute: \m -> m.fun 100 "1" true 11.1 [1, 2] {name: "Name"} 20 "X",
@@ -153,7 +153,7 @@ spec = do
       }
 
       mockTest {
-        name: "引数が9つの場合", 
+        name: "9 arguments", 
         create: \_ -> mock $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X" :> false :> 0.1,
         expected: 0.1, 
         execute: \m -> m.fun 100 "1" true 11.1 [1, 2] {name: "Name"} 20 "X" false,
@@ -163,9 +163,9 @@ spec = do
         verifyFailed: \m -> verify m $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X" :> true
       }
 
-    describe "Multi Mock" do
+    describe "Multiple calles" do
       mockTest {
-        name: "引数が1つの場合", 
+        name: "1 argument", 
         create: \_ -> mock $ [
           "1" :> 10, 
           "2" :> 20
@@ -190,7 +190,7 @@ spec = do
       }
 
       mockTest {
-        name: "引数が2つの場合", 
+        name: "2 arguments", 
         create: \_ -> mock $ [
           "1" :> 10 :> true, 
           "2" :> 20 :> false
@@ -216,7 +216,7 @@ spec = do
       }
 
       mockTest {
-        name: "引数が3つの場合", 
+        name: "3 arguments", 
         create: \_ -> mock $ [
           "1" :> 10 :> true  :> "a1", 
           "2" :> 20 :> false :> "a2"
@@ -242,7 +242,7 @@ spec = do
       }
 
       mockTest {
-        name: "引数が4つの場合", 
+        name: "4 arguments", 
         create: \_ -> mock $ [
           "1" :> 10 :> true  :> "a1" :> 2.0, 
           "2" :> 20 :> false :> "a2" :> 3.0
@@ -268,7 +268,7 @@ spec = do
       }
 
       mockTest {
-        name: "引数が5つの場合", 
+        name: "5 arguments", 
         create: \_ -> mock $ [
           "1" :> 10 :> true  :> "a1" :> 2.0 :> false, 
           "2" :> 20 :> false :> "a2" :> 3.0 :> true
@@ -294,7 +294,7 @@ spec = do
       }
 
       mockTest {
-        name: "引数が6つの場合", 
+        name: "6 arguments", 
         create: \_ -> mock $ [
           "1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2", 
           "2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3"
@@ -320,7 +320,7 @@ spec = do
       }
 
       mockTest {
-        name: "引数が7つの場合", 
+        name: "7 arguments", 
         create: \_ -> mock $ [
           "1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200, 
           "2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300
@@ -346,7 +346,7 @@ spec = do
       }
 
       mockTest {
-        name: "引数が8つの場合", 
+        name: "8 arguments", 
         create: \_ -> mock $ [
           "1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200 :> true,
           "2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300 :> false
@@ -372,7 +372,7 @@ spec = do
       }
 
       mockTest {
-        name: "引数が9つの場合", 
+        name: "9 arguments", 
         create: \_ -> mock $ [
           "1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200 :> true  :> "c3",
           "2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300 :> false :> "c4"
@@ -397,9 +397,39 @@ spec = do
         verifyFailed: \m -> verify m $ "1" :> 10 :> true :> "a1" :> 2.0 :> false :> "b2" :> 200 :> false
       }
 
+    describe "Specify the number of Verify times in detail" do
+      it "GreaterThanEqual" do
+        let 
+          m = mock $ "a" :> 10
+          _ = m.fun "a"
+          _ = m.fun "a"
+          _ = m.fun "a"
+        verifyCount m (GreaterThanEqual 3) "a"
+      it "LessThanEqual" do
+        let 
+          m = mock $ "a" :> 10
+          _ = m.fun "a"
+          _ = m.fun "a"
+          _ = m.fun "a"
+        verifyCount m (LessThanEqual 3) "a"
+      it "GreaterThan" do
+        let 
+          m = mock $ "a" :> 10
+          _ = m.fun "a"
+          _ = m.fun "a"
+          _ = m.fun "a"
+        verifyCount m (GreaterThan 2) "a"
+      it "LessThan" do
+        let 
+          m = mock $ "a" :> 10
+          _ = m.fun "a"
+          _ = m.fun "a"
+          _ = m.fun "a"
+        verifyCount m (LessThan 4) "a"
+
     describe "Matcher" do
       mockTest {
-        name: "任意の引数を扱う", 
+        name: "Handling Arbitrary Arguments.", 
         create: \_ -> mock $ (any :: Param String) :> 11,
         expected: [11, 11, 11], 
         execute: \m -> [m.fun "1233", m.fun "1234", m.fun "2234"],
@@ -410,7 +440,7 @@ spec = do
       }
 
       mockTest {
-        name: "任意の引数で検証を行う", 
+        name: "Verify with arbitrary arguments", 
         create: \_ -> mock $ "1234" :> 11,
         expected: 11, 
         execute: \m -> m.fun "1234",
@@ -421,7 +451,7 @@ spec = do
       }
 
       mockTest {
-        name: "独自の方法で引数を扱う場合", 
+        name: "Handling arguments with your own Matcher.", 
         create: \_ -> mock $ matcher (\v -> v > 10) "> 10" :> "Expected",
         expected: "Expected", 
         execute: \m -> m.fun 11,
@@ -432,7 +462,7 @@ spec = do
       }
 
       mockTest {
-        name: "独自の方法で検証を行う", 
+        name: "Verify arguments with your own Matcher", 
         create: \_ -> mock $ 10 :> "Expected",
         expected: "Expected", 
         execute: \m -> m.fun 10,
@@ -442,70 +472,34 @@ spec = do
         verifyFailed: \m -> verify m $ matcher (\v -> v > 11) "> 11"
       }
 
-    describe "Verifyの回数を細かく指定できる" do
-      it "指定回数以上" do
-        let 
-          m = mock $ "a" :> 10
-          _ = m.fun "a"
-          _ = m.fun "a"
-          _ = m.fun "a"
-        verifyCount m (GreaterThanEqual 3) "a"
-      it "指定回数以下" do
-        let 
-          m = mock $ "a" :> 10
-          _ = m.fun "a"
-          _ = m.fun "a"
-          _ = m.fun "a"
-        verifyCount m (LessThanEqual 3) "a"
-      it "指定回数超" do
-        let 
-          m = mock $ "a" :> 10
-          _ = m.fun "a"
-          _ = m.fun "a"
-          _ = m.fun "a"
-        verifyCount m (GreaterThan 2) "a"
-      it "指定回数未満" do
-        let 
-          m = mock $ "a" :> 10
-          _ = m.fun "a"
-          _ = m.fun "a"
-          _ = m.fun "a"
-        verifyCount m (LessThan 4) "a"
-
-    describe "MonadのMock" do
-      it "Monadを返すことができる1" do
+    -- Type annotation is required depending on the monad to be returned.
+    describe "Monad" do
+      it "Return Monad." do
         let
-          m = mock $ 1 :> (pure "hoge" :: Identity String)
-          _ = m.fun 1
-        verify m 1
-      
-      it "Monadを返すことができる2" do
-        let
-          -- Monad m のようにする場合、いまどのMonadで動いてるのかわからないといけない(mは駄目で、ちゃんと指定しないといけない)
-          findByTitleMock = mock $ "古いタイトル" :> (pure { title: "新しいタイトル" } :: Aff Article)
+          m = mock $ "Article Id" :> (pure { title: "Article Title" } :: Aff Article)
 
-        result <- findByTitleMock.fun "古いタイトル"
+        result <- m.fun "Article Id"
 
-        result `shouldEqual` {title: "新しいタイトル"}
+        result `shouldEqual` {title: "Article Title"}
         
-        verify findByTitleMock "古いタイトル"
+        verify m "Article Id"
       
-      it "Monadを返すことができる3" do
+      it "Return Monad(update)." do
         let
-          updateMock = mock $ "新しいtitle" :> (pure unit :: StateT State Aff Unit)
-        _ <- runStateT (updateMock.fun "新しいtitle") {article: {title: "Dummy"}} 
-        verify updateMock "新しいtitle"
+          updateMock = mock $ "New Title" :> (pure unit :: StateT State Aff Unit)
+        _ <- runStateT (updateMock.fun "New Title") {article: {title: "Old Title"}} 
+        verify updateMock "New Title"
 
     describe "Cons" do
       describe "Show" do
-        it "arg2" do
+        it "2 arguments" do
           show (10 :> true) `shouldEqual` "10, true"
-        it "arg3" do
+        it "3 arguments" do
           show ("1" :> false :> [3, 4]) `shouldEqual` "\"1\", false, [3,4]"
       describe "Eq" do
-        it "arg2" do
+        it "2 arguments" do
           (1 :> "2") `shouldEqual` (1 :> "2")
-        it "arg3" do
+        it "3 arguments" do
           ("1" :> false :> [3, 4]) `shouldEqual` ("1" :> false :> [3, 4])
 
 type Article = {
