@@ -1,20 +1,16 @@
 module Test.PMock
   (
-  Cons(..),
+  module Test.PMock.Cons,
+  module Test.PMock.Param,
+  module Test.PMock.Matcher,
   class MockBuilder,
   mock,
   verify,
   class VerifyCountBuilder,
   verifyCount,
-  (#>),
-  (:>),
-  cons,
-  class ConsGen,
   class VerifyBuilder,
   Verifier,
   showCalledParams,
-  Param,
-  param,
   any,
   anyV,
   matcher,
@@ -33,6 +29,9 @@ import Data.Maybe (Maybe(..))
 import Data.String (joinWith)
 import Effect.Exception (Error, throw)
 import Effect.Unsafe (unsafePerformEffect)
+import Test.PMock.Cons (Cons(..), (#>), type (#>))
+import Test.PMock.Matcher (Matcher, anyMatcher)
+import Test.PMock.Param (Param(..), cons, (:>), value, param)
 import Test.Spec.Assertions (fail)
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -57,17 +56,6 @@ newtype Verifier v = Verifier {
 
 verifier :: forall v. CalledParamsList v -> (CalledParamsList v -> v -> Maybe VerifyFailed) -> Verifier v
 verifier l f = Verifier { calledParamsList: l, verifyFun: f }
-
-data Cons a b = Cons a b
-
-instance showCons :: (Show a, Show b) => Show (Cons a b) where
-  show (Cons a b) = (show a) <> ", " <> (show b)
-
-instance eqCons :: (Eq a, Eq b) => Eq (Cons a b) where
-  eq (Cons a b) (Cons a2 b2) = (eq a a2) && (eq b b2)
-
-infixr 8 type Cons as #>
-infixr 8 Cons as #>
 
 type Message = String
 
@@ -227,7 +215,7 @@ instance instanceMockArg1 :: (Show a, Eq a)
     mockT s.argsList (\a2 -> extractReturnValueWithValidate defs (p a2) s)
 
 extractReturnValueWithValidate ∷ forall d a r. 
-     Extractor d a (Param r)
+     ParamDivider d a (Param r)
   => Eq a 
   => Show a 
   => d 
@@ -242,7 +230,7 @@ extractReturnValueWithValidate defs params s =
 
 findReturnValue :: forall d a r. 
      Eq a 
-  => Extractor d a (Param r)
+  => ParamDivider d a (Param r)
   => Array d
   -> a
   -> Maybe r
@@ -252,7 +240,7 @@ findReturnValue defsList inputArgs = do
 
 findReturnValueWithStore :: forall d a r.
      Eq a
-  => Extractor d a (Param r)
+  => ParamDivider d a (Param r)
   => CalledParamsList d
   -> a
   -> CallredParamsStore a
@@ -264,7 +252,7 @@ findReturnValueWithStore defsList inputArgs s =
     Just v -> v
     Nothing -> error "no answer found."
 
-returnValue :: forall defs args r. Extractor defs args (Param r) => defs -> r
+returnValue :: forall defs args r. ParamDivider defs args (Param r) => defs -> r
 returnValue = return >>> value
 
 mockT :: forall fun v. Eq v => Show v => CalledParamsList v -> fun -> Mock fun v
@@ -273,65 +261,8 @@ mockT argsList fun = {
   verifier: verifier argsList (\list args -> doVerify list args)
 }
 
-type Matcher v = v -> v -> Boolean
-
-anyMatcher :: forall a. a -> a -> Boolean
-anyMatcher _ _ = true
-
-newtype Param v = Param {
-  v :: v,
-  matcher :: Maybe (Matcher v)
-}
-
-value :: forall v. Param v -> v
-value (Param {v, matcher: _}) = v
-
-instance eqParam :: Eq a => Eq (Param a) where
-  eq (Param {v: a, matcher: (Just m1)}) (Param {v: b, matcher: (Just m2)}) = (m1 a b) && (m2 a b)
-  eq (Param {v: a, matcher: (Just m1)}) (Param {v: b, matcher: Nothing})   = m1 a b
-  eq (Param {v: a, matcher: Nothing})   (Param {v: b, matcher: (Just m2)}) = m2 a b
-  eq (Param {v: a, matcher: Nothing})   (Param {v: b, matcher: Nothing})   = a == b
-
-instance showParam :: Show a => Show (Param a) where
-  show (Param {v, matcher: _}) = show v
-
-class ConsGen a b r | a -> r, b -> r where
-  cons :: a -> b -> r
-
-instance instaneConsGen9 :: ConsGen (Cons a b) (Cons b c) (Cons (Cons a b) (Cons b c)) where
-  cons = Cons
-else
-instance instaneConsGen8 :: ConsGen (Cons a b) (Param b) (Cons (Cons a b) (Param b)) where
-  cons = Cons
-else
-instance instaneConsGen7 :: ConsGen (Param a) (Cons b c) (Cons (Param a) (Cons b c)) where
-  cons = Cons
-else
-instance instaneConsGen6 :: ConsGen a (Cons b c) (Cons (Param a) (Cons b c)) where
-  cons a b = Cons (Param {v: a, matcher: Nothing}) b
-else
-instance instaneConsGen5 :: ConsGen (Cons a b) c (Cons (Cons a b) (Param c)) where
-  cons a b = Cons a (Param {v: b, matcher: Nothing})
-else
-instance instaneConsGen4 :: ConsGen (Param a) (Param b) (Cons (Param a) (Param b)) where
-  cons = Cons
-else
-instance instaneConsGen3 :: ConsGen a (Param b) (Cons (Param a) (Param b)) where
-  cons a b = Cons (Param {v: a, matcher: Nothing}) b
-else
-instance instaneConsGen2 :: ConsGen (Param a) b (Cons (Param a) (Param b)) where
-  cons a b = Cons a (Param {v: b, matcher: Nothing})
-else
-instance instaneConsGen :: ConsGen a b (Cons (Param a) (Param b)) where
-  cons a b = Cons (param a) (param b)
-
-param :: forall a. a -> Param a
-param a = Param {v: a, matcher: Nothing}
-
 p :: forall a. a -> Param a
 p = param
-
-infixr 8 cons as :>
 
 doVerify :: forall a. Eq a => Show a => Array a -> a -> Maybe VerifyFailed
 doVerify list a = 
@@ -447,52 +378,52 @@ runRuntimeThrowableFunction f =
     r = _runRuntimeThrowableFunction f
   in if r.hasError then fail r.error else pure unit
 
-class Extractor d a r | d -> a, d -> r where
+class ParamDivider d a r | d -> a, d -> r where
   args :: d -> a
   return :: d -> r
 
-instance extractor9 :: Extractor 
+instance divider9 :: ParamDivider 
   (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g #> Param h #> Param i #> Param r)
   (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g #> Param h #> Param i) (Param r) where
   args (a #> b #> c #> d #> e #> f #> g #> h #> i #> _) = a #> b #> c #> d #> e #> f #> g #> h #> i
   return (_ #> _ #> _ #> _ #> _ #> _ #> _ #> _ #> _ #> r) = r
 else
-instance extractor8 :: Extractor 
+instance divider8 :: ParamDivider 
   (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g #> Param h #> Param r)
   (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g #> Param h) (Param r) where
   args (a #> b #> c #> d #> e #> f #> g #> h #> _) = a #> b #> c #> d #> e #> f #> g #> h
   return (_ #> _ #> _ #> _ #> _ #> _ #> _ #> _ #> r) = r
 else
-instance extractor7 :: Extractor 
+instance divider7 :: ParamDivider 
   (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g #> Param r)
   (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g) (Param r) where
   args (a #> b #> c #> d #> e #> f #> g #> _) = a #> b #> c #> d #> e #> f #> g
   return (_ #> _ #> _ #> _ #> _ #> _ #> _ #> r) = r
 else
-instance extractor6 :: Extractor 
+instance divider6 :: ParamDivider 
   (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param r)
   (Param a #> Param b #> Param c #> Param d #> Param e #> Param f) (Param r) where
   args (a #> b #> c #> d #> e #> f #> _) = a #> b #> c #> d #> e #> f
   return (_ #> _ #> _ #> _ #> _ #> _ #> r) = r
 else
-instance extractor5 :: Extractor 
+instance divider5 :: ParamDivider 
   (Param a #> Param b #> Param c #> Param d #> Param e #> Param r)
   (Param a #> Param b #> Param c #> Param d #> Param e) (Param r) where
   args (a #> b #> c #> d #> e #> _) = a #> b #> c #> d #> e
   return (_ #> _ #> _ #> _ #> _ #> r) = r
 else
-instance extractor4 :: Extractor (Param a #> Param b #> Param c #> Param d #> Param r) (Param a #> Param b #> Param c #> Param d) (Param r) where
+instance divider4 :: ParamDivider (Param a #> Param b #> Param c #> Param d #> Param r) (Param a #> Param b #> Param c #> Param d) (Param r) where
   args (a #> b #> c #> d #> _) = a #> b #> c #> d
   return (_ #> _ #> _ #> _ #> r) = r
 else
-instance extractor3 :: Extractor (Param a #> Param b #> Param c #> Param r) (Param a #> Param b #> Param c) (Param r) where
+instance divider3 :: ParamDivider (Param a #> Param b #> Param c #> Param r) (Param a #> Param b #> Param c) (Param r) where
   args (a #> b #> c #> _) = a #> b #> c
   return (_ #> _ #> _ #> r) = r
 else
-instance extractor2 :: Extractor (Param a #> Param b #> Param r) (Param a #> Param b) (Param r) where
+instance divider2 :: ParamDivider (Param a #> Param b #> Param r) (Param a #> Param b) (Param r) where
   args (a #> b #> _) = a #> b
   return (_ #> _ #> r) = r
 else
-instance extractor1 :: Extractor (Param a #> Param r) (Param a) (Param r) where
+instance divider1 :: ParamDivider (Param a #> Param r) (Param a) (Param r) where
   args (a #> _) = a
   return (_ #> r) = r
