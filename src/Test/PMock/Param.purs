@@ -8,7 +8,6 @@ module Test.PMock.Param
   , Matcher
   , matcher
   , any
-  , anyMatcher
   )
  where
 
@@ -27,10 +26,10 @@ value :: forall v. Param v -> v
 value (Param {v, matcher: _}) = v
 
 instance eqParam :: Eq a => Eq (Param a) where
-  eq (Param {v: a, matcher: (Just m1)}) (Param {v: b, matcher: (Just m2)}) = (m1 a b) && (m2 a b)
-  eq (Param {v: a, matcher: (Just m1)}) (Param {v: b, matcher: Nothing})   = m1 a b
-  eq (Param {v: a, matcher: Nothing})   (Param {v: b, matcher: (Just m2)}) = m2 a b
-  eq (Param {v: a, matcher: Nothing})   (Param {v: b, matcher: Nothing})   = a == b
+  eq (Param {v: a, matcher: (Just (Matcher m1))}) (Param {v: b, matcher: (Just (Matcher m2))}) = (m1 a b) && (m2 a b)
+  eq (Param {v: a, matcher: (Just (Matcher m1))}) (Param {v: b, matcher: Nothing})             = m1 a b
+  eq (Param {v: a, matcher: Nothing})             (Param {v: b, matcher: (Just (Matcher m2))}) = m2 a b
+  eq (Param {v: a, matcher: Nothing})             (Param {v: b, matcher: Nothing})             = a == b
 
 instance showParam :: Show a => Show (Param a) where
   show (Param {v, matcher: _}) = show v
@@ -70,13 +69,13 @@ param a = Param {v: a, matcher: Nothing}
 
 infixr 8 cons as :>
 
-type Matcher v = v -> v -> Boolean
+newtype Matcher v = Matcher (v -> v -> Boolean)
 
 anyMatcher :: forall a. a -> a -> Boolean
 anyMatcher _ _ = true
 
 any :: forall a. Param a
-any = unsafeCoerce Param {v: "any", matcher: Just anyMatcher}
+any = unsafeCoerce Param {v: "any", matcher: Just $ Matcher anyMatcher}
 
 matcher :: forall a. (a -> Boolean) -> String -> Param a
-matcher f m = Param {v: unsafeCoerce m, matcher: Just (\_ a -> f a)}
+matcher f m = Param {v: unsafeCoerce m, matcher: Just $ Matcher (\_ a -> f a)}
