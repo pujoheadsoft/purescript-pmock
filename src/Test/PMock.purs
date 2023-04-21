@@ -2,7 +2,6 @@ module Test.PMock
   (
   module Test.PMock.Cons,
   module Test.PMock.Param,
-  module Test.PMock.Matcher,
   class MockBuilder,
   mock,
   verify,
@@ -11,9 +10,6 @@ module Test.PMock
   class VerifyBuilder,
   Verifier,
   showCalledParams,
-  any,
-  anyV,
-  matcher,
   Mock,
   runRuntimeThrowableFunction,
   CountVerifyMethod(..)
@@ -30,10 +26,9 @@ import Data.String (joinWith)
 import Effect.Exception (Error, throw)
 import Effect.Unsafe (unsafePerformEffect)
 import Test.PMock.Cons (Cons(..), (#>), type (#>))
-import Test.PMock.Matcher (Matcher, anyMatcher)
-import Test.PMock.Param (Param(..), cons, (:>), value, param)
+import Test.PMock.Param (Param(..), cons, (:>), value, param, any, matcher)
+import Test.PMock.ParamDivider (class ParamDivider, args, returnValue)
 import Test.Spec.Assertions (fail)
-import Unsafe.Coerce (unsafeCoerce)
 
 type Mock fn v = {
   fun :: fn,
@@ -252,9 +247,6 @@ findReturnValueWithStore defsList inputArgs s =
     Just v -> v
     Nothing -> error "no answer found."
 
-returnValue :: forall defs args r. ParamDivider defs args (Param r) => defs -> r
-returnValue = return >>> value
-
 mockT :: forall fun v. Eq v => Show v => CalledParamsList v -> fun -> Mock fun v
 mockT argsList fun = {
   fun,
@@ -354,16 +346,6 @@ message expected actual = joinWith "\n" ["Function was not called with expected 
 error :: forall a. String -> a
 error = unsafePerformEffect <<< throw
 
-
-any :: forall a. Param a
-any = unsafeCoerce Param {v: "any", matcher: Just anyMatcher}
-
-anyV :: forall a.  a -> Param a
-anyV a = Param {v: a, matcher: Just anyMatcher}
-
-matcher :: forall a. (a -> Boolean) -> String -> Param a
-matcher f m = Param {v: unsafeCoerce m, matcher: Just (\_ a -> f a)}
-
 type TryCatchResult r = {
   hasError :: Boolean,
   error :: String,
@@ -377,53 +359,3 @@ runRuntimeThrowableFunction f =
   let
     r = _runRuntimeThrowableFunction f
   in if r.hasError then fail r.error else pure unit
-
-class ParamDivider d a r | d -> a, d -> r where
-  args :: d -> a
-  return :: d -> r
-
-instance divider9 :: ParamDivider 
-  (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g #> Param h #> Param i #> Param r)
-  (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g #> Param h #> Param i) (Param r) where
-  args (a #> b #> c #> d #> e #> f #> g #> h #> i #> _) = a #> b #> c #> d #> e #> f #> g #> h #> i
-  return (_ #> _ #> _ #> _ #> _ #> _ #> _ #> _ #> _ #> r) = r
-else
-instance divider8 :: ParamDivider 
-  (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g #> Param h #> Param r)
-  (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g #> Param h) (Param r) where
-  args (a #> b #> c #> d #> e #> f #> g #> h #> _) = a #> b #> c #> d #> e #> f #> g #> h
-  return (_ #> _ #> _ #> _ #> _ #> _ #> _ #> _ #> r) = r
-else
-instance divider7 :: ParamDivider 
-  (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g #> Param r)
-  (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g) (Param r) where
-  args (a #> b #> c #> d #> e #> f #> g #> _) = a #> b #> c #> d #> e #> f #> g
-  return (_ #> _ #> _ #> _ #> _ #> _ #> _ #> r) = r
-else
-instance divider6 :: ParamDivider 
-  (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param r)
-  (Param a #> Param b #> Param c #> Param d #> Param e #> Param f) (Param r) where
-  args (a #> b #> c #> d #> e #> f #> _) = a #> b #> c #> d #> e #> f
-  return (_ #> _ #> _ #> _ #> _ #> _ #> r) = r
-else
-instance divider5 :: ParamDivider 
-  (Param a #> Param b #> Param c #> Param d #> Param e #> Param r)
-  (Param a #> Param b #> Param c #> Param d #> Param e) (Param r) where
-  args (a #> b #> c #> d #> e #> _) = a #> b #> c #> d #> e
-  return (_ #> _ #> _ #> _ #> _ #> r) = r
-else
-instance divider4 :: ParamDivider (Param a #> Param b #> Param c #> Param d #> Param r) (Param a #> Param b #> Param c #> Param d) (Param r) where
-  args (a #> b #> c #> d #> _) = a #> b #> c #> d
-  return (_ #> _ #> _ #> _ #> r) = r
-else
-instance divider3 :: ParamDivider (Param a #> Param b #> Param c #> Param r) (Param a #> Param b #> Param c) (Param r) where
-  args (a #> b #> c #> _) = a #> b #> c
-  return (_ #> _ #> _ #> r) = r
-else
-instance divider2 :: ParamDivider (Param a #> Param b #> Param r) (Param a #> Param b) (Param r) where
-  args (a #> b #> _) = a #> b
-  return (_ #> _ #> r) = r
-else
-instance divider1 :: ParamDivider (Param a #> Param r) (Param a) (Param r) where
-  args (a #> _) = a
-  return (_ #> r) = r

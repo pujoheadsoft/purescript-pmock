@@ -4,14 +4,19 @@ module Test.PMock.Param
   , cons
   , (:>)
   , value
-  , param)
+  , param
+  , Matcher
+  , matcher
+  , any
+  , anyMatcher
+  )
  where
 
 import Prelude
 
 import Data.Maybe (Maybe(..))
 import Test.PMock.Cons (Cons(..))
-import Test.PMock.Matcher (Matcher)
+import Unsafe.Coerce (unsafeCoerce)
 
 newtype Param v = Param {
   v :: v,
@@ -65,3 +70,13 @@ param a = Param {v: a, matcher: Nothing}
 
 infixr 8 cons as :>
 
+type Matcher v = v -> v -> Boolean
+
+anyMatcher :: forall a. a -> a -> Boolean
+anyMatcher _ _ = true
+
+any :: forall a. Param a
+any = unsafeCoerce Param {v: "any", matcher: Just anyMatcher}
+
+matcher :: forall a. (a -> Boolean) -> String -> Param a
+matcher f m = Param {v: unsafeCoerce m, matcher: Just (\_ a -> f a)}
