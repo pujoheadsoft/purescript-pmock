@@ -257,14 +257,14 @@ mockFun ::
   -> fun
 mockFun params = mock params # fun
 
-doVerify :: forall a. Eq a => Show a => CalledParamsList a -> a -> Maybe VerifyFailed
-doVerify list a = 
-  if A.any (a == _) list then Nothing 
-  else Just $ verifyFailedMesssage list a
+validateWithStoreParams :: forall a. Eq a => Show a => CalledParamsStore a -> a -> a -> Unit
+validateWithStoreParams s expected actual = validateParams expected (storeCalledParams s actual)
 
-verifyFailedMesssage :: forall a. Show a => CalledParamsList a -> a -> VerifyFailed
-verifyFailedMesssage calledParams expected
-  = VerifyFailed $ joinWith "\n" ["Function was not called with expected arguments.",  "  expected: " <> show expected, "  but was : " <> show calledParams]
+validateParams :: forall a. Eq a => Show a => a -> a -> Unit
+validateParams expected actual = if (expected == actual) then unit else error $ message expected actual
+
+storeCalledParams :: forall a. CalledParamsStore a -> a -> a
+storeCalledParams s a = const a (s.store a)
 
 class Verify params input where
   verify :: forall fun m. MonadThrow Error m => Mock fun params -> input -> m Unit
@@ -281,14 +281,14 @@ _verify (Mock _ (Verifier calledParamsList verifyFun)) inputParams =
     Just (VerifyFailed msg) -> fail msg
     Nothing -> pure unit
 
-validateParams :: forall a. Eq a => Show a => a -> a -> Unit
-validateParams expected actual = if (expected == actual) then unit else error $ message expected actual
+doVerify :: forall a. Eq a => Show a => CalledParamsList a -> a -> Maybe VerifyFailed
+doVerify list a = 
+  if A.any (a == _) list then Nothing 
+  else Just $ verifyFailedMesssage list a
 
-storeCalledParams :: forall a. CalledParamsStore a -> a -> a
-storeCalledParams s a = const a (s.store a)
-
-validateWithStoreParams :: forall a. Eq a => Show a => CalledParamsStore a -> a -> a -> Unit
-validateWithStoreParams s expected actual = validateParams expected (storeCalledParams s actual)
+verifyFailedMesssage :: forall a. Show a => CalledParamsList a -> a -> VerifyFailed
+verifyFailedMesssage calledParams expected
+  = VerifyFailed $ joinWith "\n" ["Function was not called with expected arguments.",  "  expected: " <> show expected, "  but was : " <> show calledParams]
 
 data CountVerifyMethod =
     Equal Int
