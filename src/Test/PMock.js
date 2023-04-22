@@ -1,11 +1,11 @@
 export const store = function(v) {
-  const argsList = [];
-  const push = function(args) {
-    argsList.push(args);
+  const calledParamsList = [];
+  const storeCalledParams = function(params) {
+    calledParamsList.push(params);
   }
   return {
-    argsList,
-    store: push
+    calledParamsList,
+    store: storeCalledParams
   }
 }
 

@@ -10,9 +10,9 @@ import Prelude
 import Test.PMock.Cons (type (#>), (#>))
 import Test.PMock.Param (Param, value)
 
-class ParamDivider d a r | d -> a, d -> r where
-  args :: d -> a
-  return :: d -> r
+class ParamDivider params args return | params -> args, params -> return where
+  args :: params -> args
+  return :: params -> return
 
 instance divider9 :: ParamDivider 
   (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g #> Param h #> Param i #> Param r)
@@ -60,5 +60,5 @@ instance divider1 :: ParamDivider (Param a #> Param r) (Param a) (Param r) where
   args (a #> _) = a
   return (_ #> r) = r
 
-returnValue :: forall defs args r. ParamDivider defs args (Param r) => defs -> r
+returnValue :: forall params args r. ParamDivider params args (Param r) => params -> r
 returnValue = return >>> value
