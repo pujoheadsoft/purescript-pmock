@@ -6,7 +6,8 @@ import Control.Monad.Except (class MonadError)
 import Control.Monad.State (StateT, runStateT)
 import Data.Maybe (Maybe(..))
 import Effect.Aff (Aff, Error)
-import Test.PMock (CountVerifyMethod(..), Param, any, fun, matcher, mock, mockFun, runRuntimeThrowableFunction, verify, verifyCount, (:>))
+import Test.PMock (CountVerifyMethod(..), Param, any, fun, matcher, mock, mockFun, verify, verifyCount, (:>))
+import Test.PMockSpecs (mockIt, runRuntimeThrowableFunction)
 import Test.Spec (Spec, SpecT, describe, it)
 import Test.Spec.Assertions (expectError, shouldEqual)
 
@@ -476,6 +477,11 @@ spec = do
         let
           fn = mockFun $ "a" :> true :> 300
         fn "a" true `shouldEqual` 300
+      mockIt "Supplemental runtime exceptions `it`" \_ -> do
+        let
+          m = mock $ 1 :> 2
+        -- If you change the following values to values different from the expected values, you will see that you have supplemented the exception.
+        fun m 1 `shouldEqual` 2
 
     -- Type annotation is required depending on the monad to be returned.
     describe "Monad" do

@@ -11,7 +11,6 @@ module Test.PMock
   Verifier,
   showCalledParams,
   Mock,
-  runRuntimeThrowableFunction,
   CountVerifyMethod(..),
   fun,
   mockFun
@@ -346,20 +345,6 @@ message expected actual = joinWith "\n" ["Function was not called with expected 
 
 error :: forall a. String -> a
 error = unsafePerformEffect <<< throw
-
-type TryCatchResult r = {
-  hasError :: Boolean,
-  error :: String,
-  result :: r
-}
-
-foreign import _runRuntimeThrowableFunction :: forall r. (Unit -> r) -> TryCatchResult r
-
-runRuntimeThrowableFunction :: forall r m. MonadThrow Error m => (Unit -> r) -> m Unit
-runRuntimeThrowableFunction f =
-  let
-    r = _runRuntimeThrowableFunction f
-  in if r.hasError then fail r.error else pure unit
 
 p :: forall a. a -> Param a
 p = param
