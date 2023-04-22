@@ -13,7 +13,8 @@ module Test.PMock
   Mock,
   runRuntimeThrowableFunction,
   CountVerifyMethod(..),
-  run
+  fun,
+  mockFun
   )
   where
 
@@ -246,8 +247,15 @@ findReturnValueWithStore paramsList inputParams s =
     Just v -> v
     Nothing -> error "no answer found."
 
-run :: forall fun v. Mock fun v -> fun
-run (Mock fun _) = fun
+fun :: forall fun v. Mock fun v -> fun
+fun (Mock f _) = f
+
+mockFun ::
+  forall params fun verifyParams
+  . MockBuilder params fun verifyParams
+  => params
+  -> fun
+mockFun params = mock params # fun
 
 doVerify :: forall a. Eq a => Show a => CalledParamsList a -> a -> Maybe VerifyFailed
 doVerify list a = 
@@ -258,8 +266,8 @@ verifyFailedMesssage :: forall a. Show a => CalledParamsList a -> a -> VerifyFai
 verifyFailedMesssage calledParams expected
   = VerifyFailed $ joinWith "\n" ["Function was not called with expected arguments.",  "  expected: " <> show expected, "  but was : " <> show calledParams]
 
-class Verify params a where
-  verify :: forall fun m. MonadThrow Error m => Mock fun params -> a -> m Unit
+class Verify params input where
+  verify :: forall fun m. MonadThrow Error m => Mock fun params -> input -> m Unit
 
 instance instanceVerifyParam :: Eq a => Verify (Param a) a where
   verify v a = _verify v (param a)
