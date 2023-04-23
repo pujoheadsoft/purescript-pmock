@@ -266,7 +266,7 @@ validateParams expected actual = if (expected == actual) then unit else error $ 
 storeCalledParams :: forall a. CalledParamsStore a -> a -> a
 storeCalledParams s a = const a (s.store a)
 
-data VerifyMatchType a = AnyMatch a | AllMatch a
+data VerifyMatchType a = MatchAny a | MatchAll a
 
 class Verify params input where
   verify :: forall fun m. MonadThrow Error m => Mock fun params -> input -> m Unit
@@ -275,13 +275,13 @@ instance instanceVerifyParamType :: (Eq a, Show a) => Verify (Param a) (VerifyMa
   verify v a = _verify v a
 else
 instance instanceVerifyParam :: (Eq a, Show a) => Verify (Param a) a where
-  verify v a = _verify v (AnyMatch (param a))
+  verify v a = _verify v (MatchAny (param a))
 else
 instance instanceVerifyType :: (Eq a, Show a) => Verify a (VerifyMatchType a) where
   verify v a = _verify v a
 else
 instance instanceVerify :: (Eq a, Show a) => Verify a a where
-  verify v a = _verify v (AnyMatch a)
+  verify v a = _verify v (MatchAny a)
 
 _verify :: forall fun params m. Eq params => Show params => MonadThrow Error m => Mock fun params -> VerifyMatchType params -> m Unit
 _verify (Mock _ (Verifier calledParamsList)) matcher =
@@ -292,9 +292,9 @@ _verify (Mock _ (Verifier calledParamsList)) matcher =
 doVerify :: forall a. Eq a => Show a => CalledParamsList a -> VerifyMatchType a -> Maybe VerifyFailed
 doVerify list matcher =
   case matcher of
-    AnyMatch a -> if A.any (a == _) list then Nothing 
+    MatchAny a -> if A.any (a == _) list then Nothing 
                   else Just $ verifyFailedMesssage list a
-    AllMatch a -> if A.any (a /= _) list then Just $ verifyFailedMesssage list a
+    MatchAll a -> if A.any (a /= _) list then Just $ verifyFailedMesssage list a
                   else Nothing 
 
 verifyFailedMesssage :: forall a. Show a => CalledParamsList a -> a -> VerifyFailed
