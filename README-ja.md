@@ -2,10 +2,8 @@
 
 pmock is mocking library for PureScript
 
-[日本語版 README](https://github.com/pujoheadsoft/purescript-pmock/blob/master/README-ja.md)
-
-## Use mock function
-The `mockFun` function can be used to create mock functions.
+## mock関数を使う
+`mockFun` を使うとmock関数を生成することができます。
 ```haskell
 module Main where
 
@@ -24,15 +22,19 @@ main = do
     findArticle = mockFun $ "Title" :> 2023 :> {title: "ArticleTitle", body: "ArticleBody"}
   logShow $ findArticle "Title" 2023 -- { body: "ArticleBody", title: "ArticleTitle" }
 ```
-The `mockFun` function is passed arguments that are expected to be called, separated by `:>`.
-The last value separated by a `:>` is the return value.
-This is similar to a type declaration where types are separated by `->` and the last separated type is the return type.
-(In the above example, a type definition is written in findArticle to clearly indicate the correspondence.)
+`mockFun` 関数には、呼び出されることを期待する引数を `:>` で区切って渡します。
+最後に `:>` で区切られた値が戻り値となります。
 
-## Verifying function calls
-The Mock type can be used to verify the call.
-In the first example, we used `mockFun` to create the mock function directly, but when using the `Mock` type, we use `mock`.
-In this case, the mock function can be taken out of the Mock type by using `fun`.
+これは、型宣言において型を `->` で区切り、最後に区切られた型が戻り値の型になるのと似ています
+(上記の例では、対応関係を明確に示すために、findArticleに型定義を記述しています)。
+
+## 呼び出しの検証
+`Mock` 型を使うと呼び出しを検証することができるようになります。
+
+最初の例では `mockFun` を使って直接モック関数を作っていましたが、`Mock`型を使う場合は `mock` を使います。
+
+この場合、`fun` で `Mock` 型からモック関数を取り出すことができます。
+
 ```haskell
 import Prelude
 
@@ -52,15 +54,16 @@ spec = do
     -- verify
     verify m $ "Title" :> 2023
 ```
-If the verify does not match, the following message is output.
+verifyに失敗した場合、以下のようなメッセージが出力されます。
 <pre style="color: #D2706E">
 Function was not called with expected arguments.
 expected: "Another Title",2022
 but was : "Title",2023
 </pre>
-## Verifying the number of function calls
-`verifyCount` can be used to verify the number of times a mock function has been called.
-This allows you to verify that a function has not been called.
+## 呼び出し回数の検証
+`verifyCount` を使うと、モック関数が呼び出された回数を検証することができます。
+
+これにより、ある関数が呼び出されていないことなどを確認することができます。
 ```haskell
 import Prelude
 
@@ -76,7 +79,7 @@ spec = do
     -- verify count
     verifyCount m 0 $ "Title" :> 2023
 ```
-If the verify count does not match, the following message is output.
+回数が一致しない場合、以下のようなメッセージが出力されます。
 <pre style="color: #D2706E">
 ✗ verify count example:
 
@@ -85,8 +88,8 @@ expected: 1
 but was : 0
 </pre>
 
-## Specify the verify count method
-There are four validation methods that can be used
+## 回数を検証する方法を指定する
+通常の完全一致とは別に、以下の4つの検証方法が使えます。
 
 `GreaterThanEqual`
 
@@ -96,7 +99,7 @@ There are four validation methods that can be used
 
 `LessThan`
 
-Here is an example of use
+以下は使用例です。
 ```haskell
 import Prelude
 
@@ -114,7 +117,7 @@ spec = do
       _ = fun m "Title" 2023
     verifyCount m (GreaterThanEqual 3) $ "Title" :> 2023
 ```
-If the verify count does not match, the following message is output.
+回数が一致しない場合は以下のようなメッセージが出力されます。
 <pre style="color: #D2706E">
 Function was not called the expected number of times.
 expected: >= 4
@@ -122,8 +125,9 @@ but was : 3
 </pre>
 
 ## Matcher
-Matchers allow flexibility in setting and verifying expected arguments.
-By default, a matcher is used to verify that the values are identical, but you can specify a matcher that accepts arbitrary values, for example
+Matcherを使うと、期待される引数の設定や検証を柔軟に行うことができます。
+
+デフォルトでは、値が同一であることを検証するMatcherが使用されますが、例えば、任意の値を受け入れるマッチャーを指定することができます。
 ```haskell
 import Prelude
 
@@ -141,10 +145,10 @@ spec = do
     fun m "Another" 2023 `shouldEqual` false -- OK
     fun m ""        2023 `shouldEqual` false -- OK
 ```
-`any` allows the built-in matcher to accept arbitrary values.
-When used, it must be annotated with a type annotation to make the type explicit.
+`any`は、組み込み型のMatcherで、任意の値を受け取れるようにするものです。
+使用する場合は、型を明示するために型アノテーションを付ける必要があります。
 
-This matcher can also be used for verify.
+Matcherは、`verify`にも使用できます。
 ```haskell
 import Prelude
 
@@ -159,11 +163,12 @@ spec = do
       
     verifyCount m 0 $ (any :: Param String) :> (any :: Param Int)
 ```
-This verifies that the function has never been called with any value combination.
+この例は、関数がどのような値の組み合わせでも呼ばれていないことを確認する例です。
 
 ## Custom Matcher
-Can also define your own matchers by using the `matcher` function.
-The following is an example of a matcher that allows integer values greater than 2020.
+`matcher` 関数を使って独自のMatcherを定義することができます。
+
+以下は、2020以上の整数値を許容するMatcherの例です。
 ```haskell
 import Prelude
 
@@ -182,11 +187,11 @@ spec = do
     fun m "Title" 2022 `shouldEqual` false -- OK
     fun m "Title" 2023 `shouldEqual` false -- OK
 ```
-The matcher takes two arguments, the first defined as `forall a. (a -> Boolean)`.
+`matcher` は2つの引数をとり，第1引数は `forall a. (a -> Boolean)` という定義になっています．
 
-The second argument is the message to be displayed if the first function returns false.
+第2引数は、第1引数の関数がfalseを返した場合に表示されるメッセージです。
 
-This matcher can also be used for verify.
+この `matcher` は `verify` にも使用できます。
 ```haskell
 import Prelude
 
@@ -204,16 +209,17 @@ spec = do
 
     verify m $ MatchAll $ "Title" :> matcher (\v -> v > 2000) "> 2000"
 ```
-If multiple calls to a function are expected, use `MatchAll` to verify that all calls were made with the expected values.
-By default, verify will succeed if any one of the multiple calls is called with the expected value.
+mock関数に対して複数回の呼び出しが予想される場合、`MatchAll` を使用することで、「すべて」の呼び出しが期待される値で行われたかどうかを検証することができます。
 
-If you do not use any matcher, such as `mock $ "Name" :> 100`, you would not need to use `MatchAll` because you would not verify anything but the exact matching input.
+デフォルトでは、複数回の呼び出しのうち1つでも期待通りの値で呼び出されていれば、verifyは成功します。
+
+もし、`mock $ "Name" :> 100` のようにMatcherを使用しない場合は、完全に一致する入力以外は検証しないでしょうから、`MatchAll` を使用する必要はないでしょう。
 
 ## Multi Mock
-Sometimes you may want to change the value returned depending on the arguments passed.
-In such cases, multimocking can be used.
+引数によって、返す値を変えたいこともあります。
+そんな時に使えるのが Multi Mock です。
 
-Usage is simple, just pass an array of parameters to the mock function.
+使い方は簡単で、`mock` 関数にパラメーターの配列を渡すだけです。
 ```haskell
 import Prelude
 
@@ -240,8 +246,8 @@ spec = do
     verify m "The Royal Scam"
 ```
 
-## About runtime errors
-If the test is called with arguments other than those set, the test is aborted and the expected arguments and the arguments actually used in the call are printed as a message.
+## 実行時エラーについて
+期待していない引数で関数が呼び出された場合、テストは中止され、期待される引数と実際に呼び出しに使用された引数がメッセージとして出力されます。
 ```haskell
 import Prelude
 
@@ -272,10 +278,11 @@ Error: Function was not called with expected arguments.
     at ModuleJob.run (node:internal/modules/esm/module_job:175:25)
 [error] Tests failed: exit code: 1
 </pre>
-For simple tests, it may be easy to read the message and find the failed test, but if there are multiple mocks with similar argument settings, detection may be difficult.
+シンプルなテストであればメッセージを読んで失敗したテストを見つけることは容易かもしれませんが、似たような引数の設定を行なっているモックが複数存在する場合、発見が困難になるかもしれません。
 
-In that case, if you are using `purescript-spec`, you can use `mockIt` instead of `it`.
-This is a wrapper function for the existing it function, and replacing it with it will allow you to catch runtime errors.
+そのような場合、`purescript-spec`を使用している場合は、`it`の代わりに`mockIt`を使用することができます。
+
+これは既存の `it` 関数のラッパー関数で、これに置き換えることで実行時エラーを捕捉することができるようになります。
 ```haskell
 import Prelude
 
@@ -298,7 +305,7 @@ Error: Function was not called with expected arguments.
 expected: "Aja"
 but was : "Asia"
 </pre>
-The `Test.PMockSpecs` module defines `it` as an alias for `mockIt`, so use this one if you prefer.
+`Test.PMockSpecs` モジュールには `mockIt` のエイリアスとして `it` が定義されているので、お好みでこちらをご利用ください。
 ```haskell
 import Prelude
 
@@ -316,5 +323,5 @@ spec = do
 ```
 
 ## Constraints
-* Only instances of eq and show are currently allowed as mock arguments.
-* The number of supported arguments is limited to 9. If you want to handle more than this number of arguments, define an instance of `MockBuilder`.
+* 現在、mockの引数として使用できるのはeqとshowのインスタンスのみです。
+* サポートされている引数の数は有限で、9個に制限されています。この数以上の引数を扱いたい場合は、`MockBuilder`のインスタンスを定義してください。
