@@ -190,7 +190,7 @@ instance instanceMockArg1 :: (Show a, Eq a)
     createMock s.calledParamsList (\a2 -> extractReturnValueWithValidate params (p a2) s)
 
 createMock :: forall fun params. Eq params => Show params => CalledParamsList params -> fun -> Mock fun params
-createMock paramsList fun = Mock fun (Verifier paramsList \list inputArgs -> doVerify list inputArgs)
+createMock l fn = Mock fn (Verifier l)
 
 foreign import store :: forall params. Unit -> CalledParamsStore params
 
@@ -201,14 +201,11 @@ type CalledParamsStore params = {
 
 type CalledParamsList params = Array params
 
-data Verifier params = Verifier
-  (CalledParamsList params)                                 -- called parameters list
-  (CalledParamsList params -> params -> Maybe VerifyFailed) -- verify function
+newtype Verifier params = Verifier (CalledParamsList params)                                 -- called parameters list
 
 type Message = String
 
-data VerifyFailed = VerifyFailed Message
-
+newtype VerifyFailed = VerifyFailed Message
 
 extractReturnValueWithValidate ∷ forall params args r. 
      ParamDivider params args (Param r)
@@ -271,15 +268,15 @@ storeCalledParams s a = const a (s.store a)
 class Verify params input where
   verify :: forall fun m. MonadThrow Error m => Mock fun params -> input -> m Unit
 
-instance instanceVerifyParam :: Eq a => Verify (Param a) a where
+instance instanceVerifyParam :: (Eq a, Show a) => Verify (Param a) a where
   verify v a = _verify v (param a)
 else
-instance instanceVerify :: Verify a a where
+instance instanceVerify :: (Eq a, Show a) => Verify a a where
   verify v a = _verify v a
 
-_verify :: forall fun params m. MonadThrow Error m => Mock fun params -> params -> m Unit
-_verify (Mock _ (Verifier calledParamsList verifyFun)) inputParams =
-  case verifyFun calledParamsList inputParams of
+_verify :: forall fun params m. Eq params => Show params => MonadThrow Error m => Mock fun params -> params -> m Unit
+_verify (Mock _ (Verifier calledParamsList)) inputParams =
+  case doVerify calledParamsList inputParams of
     Just (VerifyFailed msg) -> fail msg
     Nothing -> pure unit
 
@@ -339,14 +336,14 @@ instance instanceVerifyCount :: VerifyCount Int a a where
   verifyCount v count a = _verifyCount v a (Equal count)
 
 _verifyCount :: forall fun params m. MonadThrow Error m => Eq params => Mock fun params -> params -> CountVerifyMethod -> m Unit
-_verifyCount (Mock _ (Verifier calledParamsList _)) v method = 
+_verifyCount (Mock _ (Verifier calledParamsList)) v method = 
   let
     callCount = length (filter (\args -> v == args) calledParamsList)
   in if compareCount method callCount then pure unit
     else fail $ joinWith "\n" ["Function was not called the expected number of times.",  "  expected: " <> show method, "  but was : " <> show callCount]
 
 showCalledParams :: forall fun params. Show params => Mock fun params -> String
-showCalledParams (Mock _ (Verifier calledParamsList _)) = show calledParamsList
+showCalledParams (Mock _ (Verifier calledParamsList)) = show calledParamsList
 
 {-
   Function was not called with expected arguments.
