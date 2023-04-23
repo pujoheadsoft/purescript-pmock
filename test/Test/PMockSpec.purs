@@ -6,7 +6,7 @@ import Control.Monad.Except (class MonadError)
 import Control.Monad.State (StateT, runStateT)
 import Data.Maybe (Maybe(..))
 import Effect.Aff (Aff, Error)
-import Test.PMock (CountVerifyMethod(..), Param, any, fun, matcher, mock, mockFun, verify, verifyCount, (:>))
+import Test.PMock (CountVerifyMethod(..), Param, VerifyMatchType(..), any, fun, matcher, mock, mockFun, verify, verifyCount, (:>))
 import Test.PMockSpecs (mockIt, runRuntimeThrowableFunction)
 import Test.Spec (Spec, SpecT, describe, it)
 import Test.Spec.Assertions (expectError, shouldEqual)
@@ -471,7 +471,25 @@ spec = do
         verifyCount: \m c -> verifyCount m c $ matcher (\v -> v > 9) "> 9",
         verifyFailed: \m -> verify m $ matcher (\v -> v > 11) "> 11"
       }
-    
+
+      it "Arbitrary Arguments All Match Arg1" do
+        let
+          m = mock $ (any :: Param Int) :> 100
+
+          _ = fun m 30
+          _ = fun m 40
+
+        verify m $ AllMatch $ matcher (\v -> v >= 30) ">= 30"
+
+      it "Arbitrary Arguments All Match Arg2" do
+        let
+          m = mock $ "Title" :> (any :: Param Int) :> false
+
+          _ = fun m "Title" 2020
+          _ = fun m "Title" 2001
+
+        verify m $ AllMatch $ "Title" :> matcher (\v -> v > 2000) "> 2000"
+
     describe "Utility" do
       it "Create mock functions directly." do
         let

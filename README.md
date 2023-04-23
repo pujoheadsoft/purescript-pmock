@@ -181,3 +181,27 @@ spec = do
     fun m "Title" 2023 `shouldEqual` false -- OK
 ```
 The matcher takes two arguments, the first defined as `forall a. (a -> Boolean)`. The second argument is the message to be displayed if the first function returns false.
+
+This matcher can also be used for verify.
+```haskell
+import Prelude
+
+import Test.PMock (Param, VerifyMatchType(..), any, fun, matcher, mock, verify, (:>))
+import Test.Spec (Spec, it)
+
+spec :: Spec Unit
+spec = do
+  it "any match example" do
+    let
+      m = mock $ "Title" :> (any :: Param Int) :> false
+
+      _ = fun m "Title" 2020
+      _ = fun m "Title" 2001
+
+    verify m $ AllMatch $ "Title" :> matcher (\v -> v > 2000) "> 2000"
+```
+If multiple calls to a function are expected, use `AllMatch` to verify that all calls were made with the expected values.
+By default, verify will succeed if any one of the multiple calls is called with the expected value.
+If you do not use any matcher, such as `mock $ "Name" :> 100`, you would not need to use `AllMatch` because you would not verify anything but the exact matching input.
+
+## Multi Mock

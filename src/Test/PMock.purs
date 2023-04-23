@@ -13,7 +13,8 @@ module Test.PMock
   Mock,
   CountVerifyMethod(..),
   fun,
-  mockFun
+  mockFun,
+  VerifyMatchType(..)
   )
   where
 
@@ -265,25 +266,36 @@ validateParams expected actual = if (expected == actual) then unit else error $ 
 storeCalledParams :: forall a. CalledParamsStore a -> a -> a
 storeCalledParams s a = const a (s.store a)
 
+data VerifyMatchType a = AnyMatch a | AllMatch a
+
 class Verify params input where
   verify :: forall fun m. MonadThrow Error m => Mock fun params -> input -> m Unit
 
+instance instanceVerifyParamType :: (Eq a, Show a) => Verify (Param a) (VerifyMatchType (Param a)) where
+  verify v a = _verify v a
+else
 instance instanceVerifyParam :: (Eq a, Show a) => Verify (Param a) a where
-  verify v a = _verify v (param a)
+  verify v a = _verify v (AnyMatch (param a))
+else
+instance instanceVerifyType :: (Eq a, Show a) => Verify a (VerifyMatchType a) where
+  verify v a = _verify v a
 else
 instance instanceVerify :: (Eq a, Show a) => Verify a a where
-  verify v a = _verify v a
+  verify v a = _verify v (AnyMatch a)
 
-_verify :: forall fun params m. Eq params => Show params => MonadThrow Error m => Mock fun params -> params -> m Unit
-_verify (Mock _ (Verifier calledParamsList)) inputParams =
-  case doVerify calledParamsList inputParams of
+_verify :: forall fun params m. Eq params => Show params => MonadThrow Error m => Mock fun params -> VerifyMatchType params -> m Unit
+_verify (Mock _ (Verifier calledParamsList)) matcher =
+  case doVerify calledParamsList matcher of
     Just (VerifyFailed msg) -> fail msg
     Nothing -> pure unit
 
-doVerify :: forall a. Eq a => Show a => CalledParamsList a -> a -> Maybe VerifyFailed
-doVerify list a = 
-  if A.any (a == _) list then Nothing 
-  else Just $ verifyFailedMesssage list a
+doVerify :: forall a. Eq a => Show a => CalledParamsList a -> VerifyMatchType a -> Maybe VerifyFailed
+doVerify list matcher =
+  case matcher of
+    AnyMatch a -> if A.any (a == _) list then Nothing 
+                  else Just $ verifyFailedMesssage list a
+    AllMatch a -> if A.any (a /= _) list then Just $ verifyFailedMesssage list a
+                  else Nothing 
 
 verifyFailedMesssage :: forall a. Show a => CalledParamsList a -> a -> VerifyFailed
 verifyFailedMesssage calledParams expected = 
