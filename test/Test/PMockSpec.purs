@@ -1,4 +1,4 @@
-module Test.PMockSpec where
+module Test.PMockSpec (pmockSpec) where
 
 import Prelude
 
@@ -59,8 +59,8 @@ mockTest f = describe f.name do
       _ = f.execute m
     f.verifyCount m 3
 
-spec :: Spec Unit
-spec = do
+pmockSpec :: Spec Unit
+pmockSpec = do
   describe "PMock Test" do
     describe "Single calls" do
 

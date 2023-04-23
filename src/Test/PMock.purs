@@ -1,22 +1,20 @@
 module Test.PMock
-  (
-  module Test.PMock.Cons,
-  module Test.PMock.Param,
-  class MockBuilder,
-  mock,
-  verify,
-  class VerifyCount,
-  verifyCount,
-  class Verify,
-  Verifier,
-  showCalledParams,
-  Mock,
-  CountVerifyMethod(..),
-  fun,
-  mockFun,
-  VerifyMatchType(..)
-  )
-  where
+  ( module Test.PMock.Cons
+  , module Test.PMock.Param
+  , class MockBuilder
+  , mock
+  , verify
+  , class VerifyCount
+  , verifyCount
+  , class Verify
+  , Verifier
+  , showCalledParams
+  , Mock
+  , CountVerifyMethod(..)
+  , fun
+  , mockFun
+  , VerifyMatchType(..)
+  ) where
 
 import Prelude
 

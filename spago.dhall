@@ -19,7 +19,6 @@ to generate this file without the comments in this block.
   , "maybe"
   , "prelude"
   , "spec"
-  , "spec-discovery"
   , "strings"
   , "transformers"
   , "unsafe-coerce"

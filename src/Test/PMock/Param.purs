@@ -8,8 +8,7 @@ module Test.PMock.Param
   , Matcher
   , matcher
   , any
-  )
- where
+  ) where
 
 import Prelude
 
