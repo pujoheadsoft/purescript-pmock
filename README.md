@@ -180,7 +180,9 @@ spec = do
     fun m "Title" 2022 `shouldEqual` false -- OK
     fun m "Title" 2023 `shouldEqual` false -- OK
 ```
-The matcher takes two arguments, the first defined as `forall a. (a -> Boolean)`. The second argument is the message to be displayed if the first function returns false.
+The matcher takes two arguments, the first defined as `forall a. (a -> Boolean)`.
+
+The second argument is the message to be displayed if the first function returns false.
 
 This matcher can also be used for verify.
 ```haskell
@@ -198,10 +200,119 @@ spec = do
       _ = fun m "Title" 2020
       _ = fun m "Title" 2001
 
-    verify m $ AllMatch $ "Title" :> matcher (\v -> v > 2000) "> 2000"
+    verify m $ MatchAll $ "Title" :> matcher (\v -> v > 2000) "> 2000"
 ```
-If multiple calls to a function are expected, use `AllMatch` to verify that all calls were made with the expected values.
+If multiple calls to a function are expected, use `MatchAll` to verify that all calls were made with the expected values.
 By default, verify will succeed if any one of the multiple calls is called with the expected value.
-If you do not use any matcher, such as `mock $ "Name" :> 100`, you would not need to use `AllMatch` because you would not verify anything but the exact matching input.
+
+If you do not use any matcher, such as `mock $ "Name" :> 100`, you would not need to use `MatchAll` because you would not verify anything but the exact matching input.
 
 ## Multi Mock
+Sometimes you may want to change the value returned depending on the arguments passed.
+In such cases, multimocking can be used.
+
+Usage is simple, just pass an array of parameters to the mock function.
+```haskell
+import Prelude
+
+import Test.PMock (fun, mock, (:>))
+import Test.Spec (Spec, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  it "multi mock example" do
+    let
+      m = mock $ [
+        "Aja" :> 1977,
+        "Gaucho" :> 1980,
+        "The Royal Scam" :> 1976
+      ]
+
+    fun m "Aja" `shouldEqual` 1977
+    fun m "Gaucho" `shouldEqual` 1980
+    fun m "The Royal Scam" `shouldEqual` 1976
+
+    verify m "Aja"
+    verify m "Gaucho"
+    verify m "The Royal Scam"
+```
+
+## About runtime errors
+If the test is called with arguments other than those set, the test is aborted and the expected arguments and the arguments actually used in the call are printed as a message.
+```haskell
+import Prelude
+
+import Test.PMock (fun, mock, (:>))
+import Test.Spec (Spec, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  it "throw runtime error example" do
+    let
+      m = mock $ "Aja" :> 1977
+    fun m "Asia" `shouldEqual` 1977
+```
+<pre>
+Error: Function was not called with expected arguments.
+  expected: "Aja"
+  but was : "Asia"
+    at Module.error (file:///home/source/purescript-pmock/output/Effect.Exception/foreign.js:6:10)
+    at Module.$$throw (file:///home/source/purescript-pmock/output/Effect.Exception/index.js:16:45)
+    at error (file:///home/source/purescript-pmock/output/Test.PMock/index.js:208:71)
+    at file:///home/source/purescript-pmock/output/Test.PMock/index.js:241:24
+    at file:///home/source/purescript-pmock/output/Test.PMock/index.js:253:53
+    at file:///home/source/purescript-pmock/output/Test.PMock/index.js:271:74
+    at file:///home/source/purescript-pmock/output/Test.PMock/index.js:337:75
+    at file:///home/source/purescript-pmock/output/Test.ExampleSpec/index.js:11:122
+    at file:///home/source/purescript-pmock/output/Test.ExampleSpec/index.js:12:3
+    at ModuleJob.run (node:internal/modules/esm/module_job:175:25)
+[error] Tests failed: exit code: 1
+</pre>
+For simple tests, it may be easy to read the message and find the failed test, but if there are multiple mocks with similar argument settings, detection may be difficult.
+
+In that case, if you are using `purescript-spec`, you can use `mockIt` instead of `it`.
+This is a wrapper function for the existing it function, and replacing it with it will allow you to catch runtime errors.
+```haskell
+import Prelude
+
+import Test.PMock (fun, mock, (:>))
+import Test.PMockSpecs (mockIt)
+import Test.Spec (Spec)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  mockIt "catch runtime error example" \_ -> do
+    let
+      m = mock $ "Aja" :> 1977
+    fun m "Asia" `shouldEqual` 1977
+```
+<pre>
+✗ catch runtime error example:
+
+Error: Function was not called with expected arguments.
+expected: "Aja"
+but was : "Asia"
+</pre>
+The `Test.PMockSpecs` module defines `it` as an alias for `mockIt`, so use this one if you prefer.
+```haskell
+import Prelude
+
+import Test.PMock (fun, mock, (:>))
+import Test.PMockSpecs (it)
+import Test.Spec (Spec)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  it "catch runtime error example" \_ -> do
+    let
+      m = mock $ "Aja" :> 1977
+    fun m "Asia" `shouldEqual` 1977
+```
+
+## Constraints
+* Only instances of eq and show are currently allowed as mock arguments.
+* The number of supported arguments is limited to 9. If you want to handle more than this number of arguments, define an instance of `MockBuilder`.
