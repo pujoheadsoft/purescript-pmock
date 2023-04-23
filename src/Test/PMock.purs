@@ -24,6 +24,9 @@ import Data.Array (filter, find, length)
 import Data.Array as A
 import Data.Maybe (Maybe(..))
 import Data.String (joinWith)
+import Data.String.Regex (replace)
+import Data.String.Regex.Flags (noFlags)
+import Data.String.Regex.Unsafe (unsafeRegex)
 import Effect.Exception (Error, throw)
 import Effect.Unsafe (unsafePerformEffect)
 import Test.PMock.Cons (Cons(..), (#>), type (#>))
@@ -286,8 +289,18 @@ doVerify list a =
   else Just $ verifyFailedMesssage list a
 
 verifyFailedMesssage :: forall a. Show a => CalledParamsList a -> a -> VerifyFailed
-verifyFailedMesssage calledParams expected
-  = VerifyFailed $ joinWith "\n" ["Function was not called with expected arguments.",  "  expected: " <> show expected, "  but was : " <> show calledParams]
+verifyFailedMesssage calledParams expected = 
+  VerifyFailed $ joinWith "\n" 
+    ["Function was not called with expected arguments.",  
+     "  expected: " <> show expected, 
+     "  but was : " <> formatCalledParamsList calledParams]
+
+
+formatCalledParamsList :: forall a. Show a => CalledParamsList a -> String
+formatCalledParamsList calledParams = do
+  if length calledParams == 1 then
+    show calledParams # (replace (unsafeRegex "^\\[" noFlags) "") >>> (replace (unsafeRegex "]$" noFlags) "")
+  else show calledParams
 
 data CountVerifyMethod =
     Equal Int
@@ -330,10 +343,10 @@ _verifyCount (Mock _ (Verifier calledParamsList _)) v method =
   let
     callCount = length (filter (\args -> v == args) calledParamsList)
   in if compareCount method callCount then pure unit
-    else fail $ joinWith "\n" ["Function was not called the expected number of times.",  "expected: " <> show method, "but was : " <> show callCount]
+    else fail $ joinWith "\n" ["Function was not called the expected number of times.",  "  expected: " <> show method, "  but was : " <> show callCount]
 
-showCalledParams :: forall params. Eq params => Show params => Verifier params -> params -> String
-showCalledParams (Verifier calledParamsList _) v = show (filter (\args -> args == v) calledParamsList)
+showCalledParams :: forall fun params. Show params => Mock fun params -> String
+showCalledParams (Mock _ (Verifier calledParamsList _)) = show calledParamsList
 
 {-
   Function was not called with expected arguments.

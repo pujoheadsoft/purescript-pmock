@@ -62,7 +62,7 @@ mockTest f = describe f.name do
 spec :: Spec Unit
 spec = do
   describe "PMock Test" do
-    describe "Single calles" do
+    describe "Single calls" do
 
       mockTest {
         name: "1 argument", 
@@ -163,7 +163,7 @@ spec = do
         verifyFailed: \m -> verify m $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X" :> true
       }
 
-    describe "Multiple calles" do
+    describe "Multiple calls" do
       mockTest {
         name: "1 argument", 
         create: \_ -> mock $ [
@@ -504,9 +504,9 @@ spec = do
     describe "Cons" do
       describe "Show" do
         it "2 arguments" do
-          show (10 :> true) `shouldEqual` "10, true"
+          show (10 :> true) `shouldEqual` "10,true"
         it "3 arguments" do
-          show ("1" :> false :> [3, 4]) `shouldEqual` "\"1\", false, [3,4]"
+          show ("1" :> false :> [3, 4]) `shouldEqual` "\"1\",false,[3,4]"
       describe "Eq" do
         it "2 arguments" do
           (1 :> "2") `shouldEqual` (1 :> "2")
