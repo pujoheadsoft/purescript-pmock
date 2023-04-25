@@ -4,6 +4,13 @@ pmock is mocking library for PureScript
 
 [日本語版 README](https://github.com/pujoheadsoft/purescript-pmock/blob/master/README-ja.md)
 
+## Installation
+
+Install with [Spago](https://github.com/purescript/spago):
+```
+spago install pmock
+```
+
 ## Use mock function
 The `mockFun` function can be used to create mock functions.
 ```haskell
