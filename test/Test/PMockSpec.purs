@@ -7,6 +7,7 @@ import Control.Monad.State (StateT, runStateT)
 import Data.Maybe (Maybe(..))
 import Effect.Aff (Aff, Error)
 import Test.PMock (CountVerifyMethod(..), Param, VerifyMatchType(..), any, fun, matcher, mock, mockFun, verify, verifyCount, (:>))
+import Test.PMock.Param (and, or)
 import Test.PMockSpecs (mockIt, runRuntimeThrowableFunction)
 import Test.Spec (Spec, SpecT, describe, it)
 import Test.Spec.Assertions (expectError, shouldEqual)
@@ -452,7 +453,7 @@ pmockSpec = do
 
       mockTest {
         name: "Handling arguments with your own Matcher.", 
-        create: \_ -> mock $ matcher (\v -> v > 10) "> 10" :> "Expected",
+        create: \_ -> mock $ matcher (_ > 10) "> 10" :> "Expected",
         expected: "Expected", 
         execute: \m -> fun m 11,
         executeFailed: Just \m -> fun m 10,
@@ -467,9 +468,31 @@ pmockSpec = do
         expected: "Expected", 
         execute: \m -> fun m 10,
         executeFailed: Just \m -> fun m 1000,
-        verifyMock: \m -> verify m $ matcher (\v -> v < 11) "< 11",
-        verifyCount: \m c -> verifyCount m c $ matcher (\v -> v > 9) "> 9",
-        verifyFailed: \m -> verify m $ matcher (\v -> v > 11) "> 11"
+        verifyMock: \m -> verify m $ matcher (_ < 11) "< 11",
+        verifyCount: \m c -> verifyCount m c $ matcher (_ > 9) "> 9",
+        verifyFailed: \m -> verify m $ matcher (_ > 11) "> 11"
+      }
+
+      mockTest {
+        name: "Handling Logical Matcher Or.", 
+        create: \_ -> mock $ "a" `or` "b" `or` "c" :> 111,
+        expected: [111, 111, 111], 
+        execute: \m -> [fun m "a", fun m "b", fun m "c"],
+        executeFailed: Just \m -> [fun m "d"],
+        verifyMock: \m -> verify m "a",
+        verifyCount: \m c -> verifyCount m c "b",
+        verifyFailed: \m -> verify m "d"
+      }
+
+      mockTest {
+        name: "Handling Logical Matcher And.", 
+        create: \_ -> mock $ (matcher (_ >= 5) ">= 5") `and` (matcher (_ <= 7) "<= 7") :> true :> 10,
+        expected: [10, 10, 10], 
+        execute: \m -> [fun m 5 true, fun m 6 true, fun m 7 true],
+        executeFailed: Just \m -> [fun m 8 true],
+        verifyMock: \m -> verify m $ 5 :> true,
+        verifyCount: \m c -> verifyCount m c $ 6 :> true,
+        verifyFailed: \m -> verify m $ 8 :> true
       }
 
       it "Arbitrary Arguments All Match Arg1" do
@@ -479,7 +502,7 @@ pmockSpec = do
           _ = fun m 30
           _ = fun m 40
 
-        verify m $ MatchAll $ matcher (\v -> v >= 30) ">= 30"
+        verify m $ MatchAll $ matcher (_ >= 30) ">= 30"
 
       it "Arbitrary Arguments All Match Arg2" do
         let
@@ -488,7 +511,7 @@ pmockSpec = do
           _ = fun m "Title" 2020
           _ = fun m "Title" 2001
 
-        verify m $ MatchAll $ "Title" :> matcher (\v -> v > 2000) "> 2000"
+        verify m $ MatchAll $ "Title" :> matcher (_ > 2000) "> 2000"
 
     describe "Utility" do
       it "Create mock functions directly." do

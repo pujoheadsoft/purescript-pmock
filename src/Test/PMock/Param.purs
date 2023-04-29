@@ -8,11 +8,17 @@ module Test.PMock.Param
   , Matcher
   , matcher
   , any
+  , class LogicalMatcher
+  , and
+  , or
   ) where
 
 import Prelude
 
 import Data.Maybe (Maybe(..))
+import Data.String.Regex (replace)
+import Data.String.Regex.Flags (global)
+import Data.String.Regex.Unsafe (unsafeRegex)
 import Test.PMock.Cons (Cons(..))
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -66,7 +72,6 @@ instance instaneConsGen :: ConsGen a b (Cons (Param a) (Param b)) where
 
 infixr 8 cons as :>
 
-
 newtype Matcher v = Matcher (v -> v -> Boolean)
 
 anyMatcher :: forall a. a -> a -> Boolean
@@ -77,3 +82,35 @@ any = unsafeCoerce (Param "any" $ Just $ Matcher anyMatcher)
 
 matcher :: forall a. (a -> Boolean) -> String -> Param a
 matcher f msg = Param (unsafeCoerce msg) (Just $ Matcher (\_ a -> f a))
+
+class LogicalMatcher a b r | a -> r, b -> r where
+  or :: a -> b -> r
+  and :: a -> b -> r
+
+instance instanceLogicMatcherBothParam :: (Eq a, Show a) => LogicalMatcher (Param a) (Param a) (Param a) where
+  or  p1@(Param _ m1) p2@(Param _ m2) = Param (unsafeCoerce $ showWithRemoveEscape p1 <> " || " <> showWithRemoveEscape p2) (composeOr m1 m2)
+  and p1@(Param _ m1) p2@(Param _ m2) = Param (unsafeCoerce $ showWithRemoveEscape p1 <> " && " <> showWithRemoveEscape p2) (composeAnd m1 m2)
+else
+instance instanceLogicMatcherParam :: (Eq a, Show a) => LogicalMatcher (Param a) a (Param a) where
+  or  p1@(Param _ m1) a = Param (unsafeCoerce $ showWithRemoveEscape p1 <> " || " <> showWithRemoveEscape a) (composeOr m1 $ Just $ Matcher (\_ v -> v == a))
+  and p1@(Param _ m1) a = Param (unsafeCoerce $ showWithRemoveEscape p1 <> " && " <> showWithRemoveEscape a) (composeAnd m1 $ Just $ Matcher (\_ v -> v == a))
+else
+instance instanceLogicMatcher :: (Eq a, Show a) => LogicalMatcher a a (Param a) where
+  or  a1 a2 = Param (unsafeCoerce $ showWithRemoveEscape a1 <> " || " <> showWithRemoveEscape a2) (Just $ Matcher (\_ a -> a == a1 || a == a2))
+  and a1 a2 = Param (unsafeCoerce $ showWithRemoveEscape a1 <> " && " <> showWithRemoveEscape a2) (Just $ Matcher (\_ a -> a == a1 && a == a2))
+
+composeOr :: forall a. Maybe (Matcher a) -> Maybe (Matcher a) -> Maybe (Matcher a)
+composeOr (Just (Matcher m1)) (Just (Matcher m2)) = Just $ Matcher (\a b -> m1 a b || m2 a b)
+composeOr (Just (Matcher m1)) Nothing             = Just $ Matcher (\a b -> m1 a b)
+composeOr Nothing             (Just (Matcher m2)) = Just $ Matcher (\a b -> m2 a b)
+composeOr Nothing             Nothing             = Nothing
+
+composeAnd :: forall a. Maybe (Matcher a) -> Maybe (Matcher a) -> Maybe (Matcher a)
+composeAnd (Just (Matcher m1)) (Just (Matcher m2)) = Just $ Matcher (\a b -> m1 a b && m2 a b)
+composeAnd (Just (Matcher m1)) Nothing             = Just $ Matcher (\a b -> m1 a b)
+composeAnd Nothing             (Just (Matcher m2)) = Just $ Matcher (\a b -> m2 a b)
+composeAnd Nothing             Nothing             = Nothing
+
+showWithRemoveEscape :: forall a. Show a => a -> String
+showWithRemoveEscape s = do
+  show s # (replace (unsafeRegex "\\\"" global) "")
