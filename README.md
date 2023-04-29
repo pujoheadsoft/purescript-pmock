@@ -216,6 +216,54 @@ By default, verify will succeed if any one of the multiple calls is called with 
 
 If you do not use any matcher, such as `mock $ "Name" :> 100`, you would not need to use `MatchAll` because you would not verify anything but the exact matching input.
 
+## Other Built-in Matchers
+The `or` allows any of several values, as in the following example.
+```haskell
+import Prelude
+
+import Test.PMock (fun, mock, or, verify, (:>))
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "OR Matcher test" do
+      let
+        m = mock $ 1 `or` 2 `or` 3 :> "OK"
+
+      fun m 1 `shouldEqual` "OK"
+      fun m 2 `shouldEqual` "OK"
+      fun m 3 `shouldEqual` "OK"
+
+      verify m 1
+      verify m 2
+      verify m 3
+```
+
+`and` can return a value only if multiple conditions are met, as follows
+```haskell
+import Prelude
+
+import Test.PMock (fun, matcher, mock, verify, (:>))
+import Test.PMock.Param (and)
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "AND Matcher test" do
+      let
+        m = mock $ matcher (0 < _) "0 < x" `and` matcher (_ < 3) "x < 3" :> "OK"
+
+      fun m 1 `shouldEqual` "OK"
+      fun m 2 `shouldEqual` "OK"
+
+      verify m 1
+      verify m 2
+```
+
 ## Multi Mock
 Sometimes you may want to change the value returned depending on the arguments passed.
 In such cases, multimocking can be used.

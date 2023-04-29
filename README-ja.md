@@ -222,6 +222,56 @@ mock関数に対して複数回の呼び出しが予想される場合、`MatchA
 
 もし、`mock $ "Name" :> 100` のようにMatcherを使用しない場合は、完全に一致する入力以外は検証しないでしょうから、`MatchAll` を使用する必要はないでしょう。
 
+## その他の組み込みMatcher
+`any`以外の`Matcher`としては、`or`と`and`が用意されています。
+
+`or`を使用すると、次の例のように複数の値のいずれも許容することができるようになります。
+```haskell
+import Prelude
+
+import Test.PMock (fun, mock, or, verify, (:>))
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "OR Matcher test" do
+      let
+        m = mock $ 1 `or` 2 `or` 3 :> "OK"
+
+      fun m 1 `shouldEqual` "OK"
+      fun m 2 `shouldEqual` "OK"
+      fun m 3 `shouldEqual` "OK"
+
+      verify m 1
+      verify m 2
+      verify m 3
+```
+
+`and`を使用すると次のように複数の条件を満たす場合のみ戻り値を返すことができます。
+```haskell
+import Prelude
+
+import Test.PMock (fun, matcher, mock, verify, (:>))
+import Test.PMock.Param (and)
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "AND Matcher test" do
+      let
+        m = mock $ matcher (0 < _) "0 < x" `and` matcher (_ < 3) "x < 3" :> "OK"
+
+      fun m 1 `shouldEqual` "OK"
+      fun m 2 `shouldEqual` "OK"
+
+      verify m 1
+      verify m 2
+```
+
 ## Multi Mock
 引数によって、返す値を変えたいこともあります。
 そんな時に使えるのが Multi Mock です。
