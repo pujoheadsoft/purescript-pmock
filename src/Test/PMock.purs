@@ -29,7 +29,7 @@ import Data.String.Regex.Unsafe (unsafeRegex)
 import Effect.Exception (Error, throw)
 import Effect.Unsafe (unsafePerformEffect)
 import Test.PMock.Cons (Cons(..), (#>), type (#>))
-import Test.PMock.Param (Param(..), cons, (:>), value, param, any, matcher)
+import Test.PMock.Param (Param(..), cons, (:>), value, param, any, matcher, or, and)
 import Test.PMock.ParamDivider (class ParamDivider, args, returnValue)
 import Test.Spec.Assertions (fail)
 
