@@ -322,6 +322,20 @@ spec = do
     fun m "Asia" `shouldEqual` 1977
 ```
 
+## Mock type annotation.
+The definition of the `Mock` type is
+
+`data Mock fun params = Mock fun (Verifier params)`
+
+where the first type parameter matches the definition of the function to mock.
+
+The next type parameter represents the type of parameters to use for verify, each wrapped in a `Param` and concatenated with the operator `#>`.
+```haskell
+m :: Mock (String -> Int -> Boolean) (Param String #> Param Int)
+m = mock $ "" :> 100 :> true
+```
+
+
 ## Constraints
 * Only instances of eq and show are currently allowed as mock arguments.
 * The number of supported arguments is limited to 9. If you want to handle more than this number of arguments, define an instance of `MockBuilder`.

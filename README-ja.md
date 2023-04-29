@@ -329,6 +329,19 @@ spec = do
     fun m "Asia" `shouldEqual` 1977
 ```
 
+## Mockの型を明示する
+`Mock` 型の定義は
+
+`data Mock fun params = Mock fun (Verifier params)`
+
+となっており、最初の型パラメーターは、モックする関数の定義と一致します。
+
+次の型パラメーターは、verifyに使用するパラメーターの型を表しており、それぞれの型を`Param`で包み、演算子`#>`で結合します。
+```haskell
+m :: Mock (String -> Int -> Boolean) (Param String #> Param Int)
+m = mock $ "" :> 100 :> true
+```
+
 ## Constraints
 * 現在、mockの引数として使用できるのはeqとshowのインスタンスのみです。
 * サポートされている引数の数は有限で、9個に制限されています。この数以上の引数を扱いたい場合は、`MockBuilder`のインスタンスを定義してください。
