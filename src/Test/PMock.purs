@@ -305,7 +305,9 @@ verifyFailedMesssage calledParams expected =
 
 formatCalledParamsList :: forall a. Show a => CalledParamsList a -> String
 formatCalledParamsList calledParams = do
-  if length calledParams == 1 then
+  if length calledParams == 0 then
+    "Never been called."
+  else if length calledParams == 1 then
     show calledParams # (replace (unsafeRegex "^\\[" noFlags) "") >>> (replace (unsafeRegex "]$" noFlags) "")
   else show calledParams
 
