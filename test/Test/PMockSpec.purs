@@ -4,7 +4,10 @@ import Prelude
 
 import Control.Monad.Except (class MonadError)
 import Control.Monad.State (StateT, runStateT)
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
+import Data.Show.Generic (genericShow)
 import Effect.Aff (Aff, Error)
 import Test.PMock (CountVerifyMethod(..), Param, VerifyMatchType(..), any, fun, matcher, mock, mockFun, verify, verifyCount, (:>))
 import Test.PMock.Param (and, or)
@@ -542,6 +545,17 @@ pmockSpec = do
         _ <- runStateT (fun updateMock "New Title") {article: {title: "Old Title"}} 
         verify updateMock "New Title"
 
+    mockTest {
+      name: "ADT", 
+      create: \_ -> mock $ (Data1 "data1") :> "data1",
+      expected: "data1", 
+      execute: \m -> fun m (Data1 "data1"),
+      executeFailed: Just \m -> fun m (Data1 "data2"),
+      verifyMock: \m -> verify m (Data1 "data1"),
+      verifyCount: \m c -> verifyCount m c (Data1 "data1"),
+      verifyFailed: \m -> verify m (Data2 "data1")
+    }
+
     describe "Cons" do
       describe "Show" do
         it "2 arguments" do
@@ -561,3 +575,10 @@ type Article = {
 type State = { 
   article :: Article 
 }
+
+data Data a = Data1 a | Data2 a
+derive instance genericData :: Generic (Data a) _
+instance showData :: Show a => Show (Data a) where
+  show = genericShow
+instance eqData :: Eq a => Eq (Data a) where
+  eq = genericEq
