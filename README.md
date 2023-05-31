@@ -263,6 +263,42 @@ spec = do
       verify m 1
       verify m 2
 ```
+You can use `not` to invert the condition as follows.
+
+If a value is specified, it will be accepted other that value.
+```haskell
+import Prelude
+
+import Test.PMock (fun, mock, not, (:>))
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "Not Matcher test" do
+      let
+        m = mock $ not 5 :> "OK"
+
+      fun m 4 `shouldEqual` "OK"
+      fun m 6 `shouldEqual` "OK"
+```
+It can be combined with other `Matchers`.
+```haskell
+import Test.PMock (fun, mock, not, or, (:>))
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "Not Matcher test" do
+      let
+        m = mock $ not (4 `or` 5) :> "OK"
+
+      fun m 3 `shouldEqual` "OK"
+      fun m 6 `shouldEqual` "OK"
+```
 
 ## Multi Mock
 Sometimes you may want to change the value returned depending on the arguments passed.

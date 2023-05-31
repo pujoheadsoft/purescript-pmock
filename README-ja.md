@@ -223,7 +223,7 @@ mock関数に対して複数回の呼び出しが予想される場合、`MatchA
 もし、`mock $ "Name" :> 100` のようにMatcherを使用しない場合は、完全に一致する入力以外は検証しないでしょうから、`MatchAll` を使用する必要はないでしょう。
 
 ## その他の組み込みMatcher
-`any`以外の`Matcher`としては、`or`と`and`が用意されています。
+`any`以外の`Matcher`としては、`or`, `and`, `not`が用意されています。
 
 `or`を使用すると、次の例のように複数の値のいずれも許容することができるようになります。
 ```haskell
@@ -270,6 +270,42 @@ spec = do
 
       verify m 1
       verify m 2
+```
+`not`を使用すると次のように条件を反転させることができます。
+
+値を指定した場合は、その値"以外"を受け付けるようになります。
+```haskell
+import Prelude
+
+import Test.PMock (fun, mock, not, (:>))
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "Not Matcher test" do
+      let
+        m = mock $ not 5 :> "OK"
+
+      fun m 4 `shouldEqual` "OK"
+      fun m 6 `shouldEqual` "OK"
+```
+次のように他の`Matcher`と組み合わせることもできます。
+```haskell
+import Test.PMock (fun, mock, not, or, (:>))
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "Not Matcher test" do
+      let
+        m = mock $ not (4 `or` 5) :> "OK"
+
+      fun m 3 `shouldEqual` "OK"
+      fun m 6 `shouldEqual` "OK"
 ```
 
 ## Multi Mock
