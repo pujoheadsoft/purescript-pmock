@@ -9,8 +9,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Data.Show.Generic (genericShow)
 import Effect.Aff (Aff, Error)
-import Test.PMock (CountVerifyMethod(..), Param, VerifyMatchType(..), any, fun, matcher, mock, mockFun, verify, verifyCount, (:>))
-import Test.PMock.Param (and, or)
+import Test.PMock (CountVerifyMethod(..), Param, VerifyMatchType(..), any, and, or, not, fun, matcher, mock, mockFun, verify, verifyCount, (:>))
 import Test.PMockSpecs (mockIt, runRuntimeThrowableFunction)
 import Test.Spec (Spec, SpecT, describe, it)
 import Test.Spec.Assertions (expectError, shouldEqual)
@@ -496,6 +495,39 @@ pmockSpec = do
         verifyMock: \m -> verify m $ 5 :> true,
         verifyCount: \m c -> verifyCount m c $ 6 :> true,
         verifyFailed: \m -> verify m $ 8 :> true
+      }
+
+      mockTest {
+        name: "Include Not Matcher as an argument.",
+        create: \_ -> mock $ not "X" :> 11,
+        expected: 11,
+        execute: \m -> fun m "x",
+        executeFailed: Just \m -> fun m "X",
+        verifyMock: \m -> verify m "x",
+        verifyCount: \m c -> verifyCount m c "x",
+        verifyFailed: \m -> verify m "X"
+      }
+
+      mockTest {
+        name: "Verify with Not Matcher.",
+        create: \_ -> mock $ "X" :> 11,
+        expected: 11,
+        execute: \m -> fun m "X",
+        executeFailed: Nothing,
+        verifyMock: \m -> verify m $ not "x",
+        verifyCount: \m c -> verifyCount m c $ not "x",
+        verifyFailed: \m -> verify m "x"
+      }
+
+      mockTest {
+        name: "Include Not Matcher (function) as an argument.",
+        create: \_ -> mock $ (not $ matcher (_ > 10) "> 10") :> 11,
+        expected: 11,
+        execute: \m -> fun m 10,
+        executeFailed: Just \m -> fun m 11,
+        verifyMock: \m -> verify m 10,
+        verifyCount: \m c -> verifyCount m c 10,
+        verifyFailed: \m -> verify m 11
       }
 
       it "Arbitrary Arguments All Match Arg1" do

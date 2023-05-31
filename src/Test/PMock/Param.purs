@@ -8,6 +8,8 @@ module Test.PMock.Param
   , Matcher
   , matcher
   , any
+  , class NotMatcher
+  , not
   , class LogicalMatcher
   , and
   , or
@@ -82,6 +84,15 @@ any = unsafeCoerce (Param "any" $ Just $ Matcher anyMatcher)
 
 matcher :: forall a. (a -> Boolean) -> String -> Param a
 matcher f msg = Param (unsafeCoerce msg) (Just $ Matcher (\_ a -> f a))
+
+class NotMatcher a r | a -> r where
+  not :: a -> r
+
+instance instanceNotMatcherParam :: (Eq a, Show a) => NotMatcher (Param a) (Param a) where
+  not (Param v m) = Param (unsafeCoerce $ "Not " <> showWithRemoveEscape v) ((\(Matcher f) -> Matcher (\a b -> true /= f a b)) <$> m)
+else
+instance instanceNotMatcher :: (Eq a, Show a) => NotMatcher a (Param a) where
+  not v = Param (unsafeCoerce $ "Not " <> showWithRemoveEscape v) (Just $ Matcher (\_ a -> a /= v))
 
 class LogicalMatcher a b r | a -> r, b -> r where
   or :: a -> b -> r
