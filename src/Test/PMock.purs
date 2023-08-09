@@ -312,26 +312,48 @@ class VerifyOrder params input where
   verifySequence :: forall fun m. MonadThrow Error m => Mock fun params -> Array input -> m Unit
 
 instance instanceVerifyParamOrder :: (Eq a, Show a) => VerifyOrder (Param a) a where
-  verifySequence v a = _verifySequence v $ param <$> a
+  verifySequence v a = _verifyOrder ExactlySequence v $ param <$> a
 else
 instance instanceVerifyOrder :: (Eq a, Show a) => VerifyOrder a a where
-  verifySequence v a = _verifySequence v a
+  verifySequence v a = _verifyOrder ExactlySequence v a
 
 
-_verifySequence :: forall fun params m. Eq params => Show params => MonadThrow Error m => Mock fun params -> Array params -> m Unit
-_verifySequence (Mock _ (Verifier calledParamsList)) matchers =
-  case doVerifyOrder Sequence calledParamsList matchers of
+_verifyOrder 
+  :: forall fun params m
+   . Eq params
+  => Show params
+  => MonadThrow Error m
+  => VerifyOrderMethod
+  -> Mock fun params
+  -> Array params
+  -> m Unit
+_verifyOrder method (Mock _ (Verifier calledParamsList)) matchers =
+  case doVerifyOrder method calledParamsList matchers of
     Just (VerifyFailed msg) -> fail msg
     Nothing -> pure unit
 
-data VerificationOrder
-  = Sequence
+data VerifyOrderMethod
+  = ExactlySequence
+  | PartiallySequence
 
-doVerifyOrder :: forall a. Eq a => Show a => VerificationOrder -> CalledParamsList a -> Array a -> Maybe VerifyFailed
+doVerifyOrder :: forall a. Eq a => Show a => VerifyOrderMethod -> CalledParamsList a -> Array a -> Maybe VerifyFailed
 doVerifyOrder order list matchers
   | length list < length matchers = Just (VerifyFailed "hoge")
   | otherwise = case order of
-    Sequence -> let
+    ExactlySequence ->
+      if length list /= length matchers then
+        Just $ VerifyFailed $ joinWith "\n"
+         ["The number of function calls doesn't match the number of params.",
+          "  number of function calls: " <> (show $ length list),
+          "  number of params:         " <> (show $ length matchers)]
+      else let
+        results = mapWithIndex (\index a -> do
+          if a == (unsafeIndex list index) then Nothing
+          else Just $ verifyOrderFailedMesssage index (unsafeIndex list index) a
+        ) matchers
+        in if A.all isNothing results then Nothing
+        else Just $ xxx (catMaybes results)
+    PartiallySequence -> let
       results = mapWithIndex (\index a -> do
         if a == (unsafeIndex list index) then Nothing
         else Just $ verifyOrderFailedMesssage index (unsafeIndex list index) a
@@ -344,6 +366,8 @@ doVerifyOrder order list matchers
       case arr !! idx of
         Just a -> a
         Nothing -> unsafeCrashWith "Array is too short"
+
+
 
 xxx :: Array VerifyFailed -> VerifyFailed
 xxx fails = VerifyFailed $ joinWith "\n" $ A.cons "Function was not called with expected order." $ unwrap <$> fails
@@ -362,7 +386,7 @@ verifyOrderFailedMesssage index calledParam expected =
   showHumanReadable 3 = "3rd"
   showHumanReadable x = show x <> "th"
 
-type VerificationOrderResult = {
+type VerifyOrderMethodResult = {
   index :: Int,
   isMatchOrder :: Boolean,
   failure :: Maybe VerifyFailed

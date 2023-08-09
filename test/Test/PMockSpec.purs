@@ -600,48 +600,70 @@ pmockSpec = do
         _ <- runStateT (fun updateMock "New Title") {article: {title: "Old Title"}} 
         verify updateMock "New Title"
 
-    describe "verify exactly sequential order." do
-      mockOrderTest {
-        name: "1 Arguments", 
-        create: \_ -> mock $ any :> unit,
-        execute: \m -> do
-          let
-            _ = fun m "a"
-            _ = fun m "b"
-            _ = fun m "c"
-          unit,
-        verifyMock: \m -> verifySequence m [
-          "a",
-          "b",
-          "c"
-        ],
-        verifyFailed: \m -> verifySequence m [
-          "a",
-          "b",
-          "b"
-        ]
-      }
+    describe "Order Verification" do
+      describe "Verify exactly sequential order." do
+        mockOrderTest {
+          name: "1 Arguments", 
+          create: \_ -> mock $ any :> unit,
+          execute: \m -> do
+            let
+              _ = fun m "a"
+              _ = fun m "b"
+              _ = fun m "c"
+            unit,
+          verifyMock: \m -> verifySequence m [
+            "a",
+            "b",
+            "c"
+          ],
+          verifyFailed: \m -> verifySequence m [
+            "a",
+            "b",
+            "b"
+          ]
+        }
 
-      mockOrderTest {
-        name: "2 Arguments", 
-        create: \_ -> mock $ any :> any :> unit,
-        execute: \m -> do
-          let
-            _ = fun m "a" 1
-            _ = fun m "b" 2
-            _ = fun m "c" 3
-          unit,
-        verifyMock: \m -> verifySequence m [
-          "a" :> 1,
-          "b" :> 2,
-          "c" :> 3
-        ],
-        verifyFailed: \m -> verifySequence m [
-          "a" :> 2,
-          "b" :> 2,
-          "c" :> 3
-        ]
-      }
+        mockOrderTest {
+          name: "2 Arguments", 
+          create: \_ -> mock $ any :> any :> unit,
+          execute: \m -> do
+            let
+              _ = fun m "a" 1
+              _ = fun m "b" 2
+              _ = fun m "c" 3
+            unit,
+          verifyMock: \m -> verifySequence m [
+            "a" :> 1,
+            "b" :> 2,
+            "c" :> 3
+          ],
+          verifyFailed: \m -> verifySequence m [
+            "a" :> 2,
+            "b" :> 2,
+            "c" :> 3
+          ]
+        }
+      
+      -- describe "Verify partially sequential order." do
+      --   mockOrderTest {
+      --     name: "1 Arguments", 
+      --     create: \_ -> mock $ any :> unit,
+      --     execute: \m -> do
+      --       let
+      --         _ = fun m "a"
+      --         _ = fun m "b"
+      --         _ = fun m "c"
+      --       unit,
+      --     verifyMock: \m -> verifyPartiallySequence m [
+      --       "a",
+      --       "c"
+      --     ],
+      --     verifyFailed: \m -> verifyPartiallySequence m [
+      --       "b",
+      --       "a"
+      --     ]
+      --   }
+
 
     mockTest {
       name: "ADT", 
