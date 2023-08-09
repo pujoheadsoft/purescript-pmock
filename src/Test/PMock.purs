@@ -14,20 +14,24 @@ module Test.PMock
   , fun
   , mockFun
   , VerifyMatchType(..)
+  , verifySequence
+  , class VerifyOrder
   ) where
 
 import Prelude
 
 import Control.Monad.Error.Class (class MonadThrow)
-import Data.Array (filter, find, length)
+import Data.Array (catMaybes, filter, find, length, mapWithIndex, (!!))
 import Data.Array as A
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), isNothing)
+import Data.Newtype (class Newtype, unwrap)
 import Data.String (joinWith)
 import Data.String.Regex (replace)
 import Data.String.Regex.Flags (noFlags)
 import Data.String.Regex.Unsafe (unsafeRegex)
 import Effect.Exception (Error, throw)
 import Effect.Unsafe (unsafePerformEffect)
+import Partial.Unsafe (unsafeCrashWith)
 import Test.PMock.Cons (Cons(..), (#>), type (#>))
 import Test.PMock.Param (Param(..), cons, (:>), value, param, any, matcher, or, and, not)
 import Test.PMock.ParamDivider (class ParamDivider, args, returnValue)
@@ -205,6 +209,7 @@ newtype Verifier params = Verifier (CalledParamsList params)                    
 type Message = String
 
 newtype VerifyFailed = VerifyFailed Message
+derive instance newtypeVerifyFailed :: Newtype VerifyFailed _
 
 extractReturnValueWithValidate ∷ forall params args r. 
      ParamDivider params args (Param r)
@@ -302,6 +307,66 @@ verifyFailedMesssage calledParams expected =
      "  expected: " <> show expected, 
      "  but was : " <> formatCalledParamsList calledParams]
 
+
+class VerifyOrder params input where
+  verifySequence :: forall fun m. MonadThrow Error m => Mock fun params -> Array input -> m Unit
+
+instance instanceVerifyParamOrder :: (Eq a, Show a) => VerifyOrder (Param a) a where
+  verifySequence v a = _verifySequence v $ param <$> a
+else
+instance instanceVerifyOrder :: (Eq a, Show a) => VerifyOrder a a where
+  verifySequence v a = _verifySequence v a
+
+
+_verifySequence :: forall fun params m. Eq params => Show params => MonadThrow Error m => Mock fun params -> Array params -> m Unit
+_verifySequence (Mock _ (Verifier calledParamsList)) matchers =
+  case doVerifyOrder Sequence calledParamsList matchers of
+    Just (VerifyFailed msg) -> fail msg
+    Nothing -> pure unit
+
+data VerificationOrder
+  = Sequence
+
+doVerifyOrder :: forall a. Eq a => Show a => VerificationOrder -> CalledParamsList a -> Array a -> Maybe VerifyFailed
+doVerifyOrder order list matchers
+  | length list < length matchers = Just (VerifyFailed "hoge")
+  | otherwise = case order of
+    Sequence -> let
+      results = mapWithIndex (\index a -> do
+        if a == (unsafeIndex list index) then Nothing
+        else Just $ verifyOrderFailedMesssage index (unsafeIndex list index) a
+      ) matchers
+      in if A.all isNothing results then Nothing
+      else Just $ xxx (catMaybes results)
+    where
+    unsafeIndex :: Array a -> Int -> a
+    unsafeIndex arr idx =
+      case arr !! idx of
+        Just a -> a
+        Nothing -> unsafeCrashWith "Array is too short"
+
+xxx :: Array VerifyFailed -> VerifyFailed
+xxx fails = VerifyFailed $ joinWith "\n" $ A.cons "Function was not called with expected order." $ unwrap <$> fails
+
+verifyOrderFailedMesssage :: forall a. Show a => Int -> a -> a -> VerifyFailed
+verifyOrderFailedMesssage index calledParam expected = 
+  let
+    callCount = showHumanReadable (index + 1)
+  in VerifyFailed $ joinWith "\n" 
+    ["  expected " <> callCount <> " call: " <> show expected, 
+     "  but was  " <> callCount <> " call: " <> show calledParam]
+  where 
+  showHumanReadable :: Int -> String
+  showHumanReadable 1 = "1st"
+  showHumanReadable 2 = "2nd"
+  showHumanReadable 3 = "3rd"
+  showHumanReadable x = show x <> "th"
+
+type VerificationOrderResult = {
+  index :: Int,
+  isMatchOrder :: Boolean,
+  failure :: Maybe VerifyFailed
+}
 
 formatCalledParamsList :: forall a. Show a => CalledParamsList a -> String
 formatCalledParamsList calledParams = do

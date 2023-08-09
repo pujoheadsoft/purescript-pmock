@@ -7,6 +7,8 @@
   , "effect"
   , "exceptions"
   , "maybe"
+  , "newtype"
+  , "partial"
   , "prelude"
   , "spec"
   , "strings"

@@ -4,12 +4,13 @@ import Prelude
 
 import Control.Monad.Except (class MonadError)
 import Control.Monad.State (StateT, runStateT)
+import Data.Array (fold)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Data.Show.Generic (genericShow)
 import Effect.Aff (Aff, Error)
-import Test.PMock (CountVerifyMethod(..), Param, VerifyMatchType(..), any, and, or, not, fun, matcher, mock, mockFun, verify, verifyCount, (:>))
+import Test.PMock (CountVerifyMethod(..), Param, VerifyMatchType(..), and, any, fun, matcher, mock, mockFun, not, or, param, verify, verifyCount, verifySequence, (:>))
 import Test.PMockSpecs (mockIt, runRuntimeThrowableFunction)
 import Test.Spec (Spec, SpecT, describe, it)
 import Test.Spec.Assertions (expectError, shouldEqual)
@@ -22,6 +23,14 @@ type Fixture mock r m = {
   expected :: r,
   verifyMock :: mock -> m Unit,
   verifyCount :: mock -> Int -> m Unit,
+  verifyFailed :: mock -> m Unit
+}
+
+type OrderVerifyFixture mock r m = {
+  name :: String,
+  create :: Unit -> mock,
+  execute :: mock -> r,
+  verifyMock :: mock -> m Unit,
   verifyFailed :: mock -> m Unit
 }
 
@@ -61,6 +70,20 @@ mockTest f = describe f.name do
       _ = f.execute m
       _ = f.execute m
     f.verifyCount m 3
+
+mockOrderTest :: forall mock m g r. Monad m => Eq r => Show r => MonadError Error g => OrderVerifyFixture mock r g -> SpecT g Unit m Unit
+mockOrderTest f = describe f.name do
+  it "Verify that the call was made with the set arguments." do
+    let 
+      m = f.create unit
+      _ = f.execute m
+    f.verifyMock m
+
+  it "Verify fails if the call is made with arguments different from those set." do
+    let 
+      m = f.create unit
+      _ = f.execute m
+    expectError $ f.verifyFailed m
 
 pmockSpec :: Spec Unit
 pmockSpec = do
@@ -429,7 +452,7 @@ pmockSpec = do
           _ = fun m "a"
           _ = fun m "a"
         verifyCount m (LessThan 4) "a"
-
+    
     describe "Matcher" do
       mockTest {
         name: "Handling Arbitrary Arguments.", 
@@ -576,6 +599,49 @@ pmockSpec = do
           updateMock = mock $ "New Title" :> (pure unit :: StateT State Aff Unit)
         _ <- runStateT (fun updateMock "New Title") {article: {title: "Old Title"}} 
         verify updateMock "New Title"
+
+    describe "verify exactly sequential order." do
+      mockOrderTest {
+        name: "1 Arguments", 
+        create: \_ -> mock $ any :> unit,
+        execute: \m -> do
+          let
+            _ = fun m "a"
+            _ = fun m "b"
+            _ = fun m "c"
+          unit,
+        verifyMock: \m -> verifySequence m [
+          "a",
+          "b",
+          "c"
+        ],
+        verifyFailed: \m -> verifySequence m [
+          "a",
+          "b",
+          "b"
+        ]
+      }
+
+      mockOrderTest {
+        name: "2 Arguments", 
+        create: \_ -> mock $ any :> any :> unit,
+        execute: \m -> do
+          let
+            _ = fun m "a" 1
+            _ = fun m "b" 2
+            _ = fun m "c" 3
+          unit,
+        verifyMock: \m -> verifySequence m [
+          "a" :> 1,
+          "b" :> 2,
+          "c" :> 3
+        ],
+        verifyFailed: \m -> verifySequence m [
+          "a" :> 2,
+          "b" :> 2,
+          "c" :> 3
+        ]
+      }
 
     mockTest {
       name: "ADT", 
