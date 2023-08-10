@@ -131,6 +131,100 @@ expected: >= 4
 but was : 3
 </pre>
 
+## 呼び出された順序を検証する
+### 厳密に呼び出し順を検証する
+`verifySequence`は、指定された順序で関数が呼び出されたことを検証します。
+
+関数の呼び出しすべてに対し、順序が完全に一致しているか検証されます。例えば3回呼び出されることが期待される関数であるならば、呼び出しの期待値も3つでなければなりません。
+```haskell
+import Prelude
+
+import Test.PMock (any, fun, mock, verifySequence, (:>))
+import Test.Spec (Spec, describe, it)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "verify exactly sequential order" do
+      let
+        m = mock $ any :> unit
+        -- function call 3 times.
+        _ = fun m "a"
+        _ = fun m "b"
+        _ = fun m "c"
+
+      -- verify OK
+      verifySequence m [
+        "a",
+        "b",
+        "c"
+      ]
+```
+検証に失敗した場合は何回目の呼び出しの検証に失敗したかと、その期待値と実際の値を知ることができます。
+
+例えば上記の例で期待値を次のようにしたとします。
+```haskell
+verifySequence m [
+  "b",
+  "c",
+  "a"
+]
+```
+すると検証に失敗し、次のようなメッセージが表示されます。
+<pre style="color: #D2706E">
+Function was not called with expected order.
+expected 1st call: "b"
+but was  1st call: "a"
+expected 2nd call: "c"
+but was  2nd call: "b"
+expected 3rd call: "a"
+but was  3rd call: "c"
+</pre>
+### 部分的に呼び出し順を検証する
+`verifyPartiallySequence`は、特定の順序で関数が呼び出されたことを検証します。
+
+`verifySequence`とは異なり、すべての呼び出し対して完全に一致している必要はありません。順序さえ一致していれば検証に成功します。例えば次のように、`"a"`,`"c"`の順で呼び出されたことを検証することができます。
+```haskell
+import Prelude
+
+import Test.PMock (any, fun, mock, verifyPartiallySequence, (:>))
+import Test.Spec (Spec, describe, it)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "verify partially sequential order" do
+      let
+        m = mock $ any :> unit
+        _ = fun m "a"
+        _ = fun m "b"
+        _ = fun m "c"
+
+      verifyPartiallySequence m [
+        "a",
+        "c"
+      ]
+```
+検証に失敗した場合は、期待される呼び出し順と、実際の呼び出し順がすべて表示されます。
+例えば上記の例で期待値を次のようにしたとします。
+```haskell
+verifySequence m [
+  "c",
+  "a"
+]
+```
+すると次のようなメッセージが表示されます。
+<pre style="color: #D2706E">
+Function was not called with expected order.
+expected order:
+  "c"
+  "a"
+actual order:
+  "a"
+  "b"
+  "c"
+</pre>
+
 ## Matcher
 Matcherを使うと、期待される引数の設定や検証を柔軟に行うことができます。
 
@@ -172,7 +266,7 @@ spec = do
 ```
 この例は、関数がどのような値の組み合わせでも呼ばれていないことを確認する例です。
 
-## Custom Matcher
+### Custom Matcher
 `matcher` 関数を使って独自のMatcherを定義することができます。
 
 以下は、2020以上の整数値を許容するMatcherの例です。
@@ -222,7 +316,7 @@ mock関数に対して複数回の呼び出しが予想される場合、`MatchA
 
 もし、`mock $ "Name" :> 100` のようにMatcherを使用しない場合は、完全に一致する入力以外は検証しないでしょうから、`MatchAll` を使用する必要はないでしょう。
 
-## その他の組み込みMatcher
+### その他の組み込みMatcher
 `any`以外の`Matcher`としては、`or`, `and`, `not`が用意されています。
 
 `or`を使用すると、次の例のように複数の値のいずれも許容することができるようになります。
@@ -355,7 +449,7 @@ spec = do
       m = mock $ "Aja" :> 1977
     fun m "Asia" `shouldEqual` 1977
 ```
-<pre>
+<pre style="color: #D2706E">
 Error: Function was not called with expected arguments.
   expected: "Aja"
   but was : "Asia"
@@ -391,7 +485,7 @@ spec = do
       m = mock $ "Aja" :> 1977
     fun m "Asia" `shouldEqual` 1977
 ```
-<pre>
+<pre style="color: #D2706E">
 ✗ catch runtime error example:
 
 Error: Function was not called with expected arguments.

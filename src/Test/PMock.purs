@@ -26,8 +26,7 @@ import Control.Monad.Error.Class (class MonadThrow)
 import Data.Array (catMaybes, filter, find, length, mapWithIndex, (!!))
 import Data.Array as A
 import Data.Foldable (foldl)
-import Data.Maybe (Maybe(..), isJust, isNothing)
-import Data.Newtype (class Newtype, unwrap)
+import Data.Maybe (Maybe(..), isNothing)
 import Data.String (joinWith)
 import Data.String.Regex (replace)
 import Data.String.Regex.Flags (noFlags)
@@ -212,7 +211,6 @@ newtype Verifier params = Verifier (CalledParamsList params)                    
 type Message = String
 
 newtype VerifyFailed = VerifyFailed Message
-derive instance newtypeVerifyFailed :: Newtype VerifyFailed _
 
 extractReturnValueWithValidate ∷ forall params args r. 
      ParamDivider params args (Param r)
@@ -413,20 +411,30 @@ doVerifyOrder ExactlySequence calledValues expectedValues
   | length calledValues /= length expectedValues =
     pure $ verifyFailedOrderParamCountMismatch "The number of function calls doesn't match the number of params." calledValues expectedValues
   | otherwise = do
-    let
-      verifyOrderResults = mapWithIndex (\i expectedValue -> do
-        let calledValue = unsafeIndex calledValues i
-        guard $ expectedValue /= calledValue
-        pure $ verifyOrderFailedMesssage i calledValue expectedValue
-      ) expectedValues
-    guard $ A.any isJust verifyOrderResults
-    pure $ verifyFailedSequence (catMaybes verifyOrderResults)
+    let unexpectedOrders = collectUnExpectedOrder calledValues expectedValues
+    guard $ length unexpectedOrders > 0
+    pure $ verifyFailedSequence unexpectedOrders
+
 doVerifyOrder PartiallySequence calledValues expectedValues
   | length calledValues < length expectedValues =
     pure $ verifyFailedOrderParamCountMismatch "The number of parameters exceeds the number of function calls." calledValues expectedValues
   | otherwise = do
     guard $ isOrderNotMatched calledValues expectedValues
     pure $ verifyFailedPartiallySequence calledValues expectedValues
+
+type VerifyOrderResult a = {
+  index :: Int,
+  calledValue :: a,
+  expectedValue :: a
+}
+
+collectUnExpectedOrder :: forall a. Eq a => Show a => CalledParamsList a -> Array a -> Array (VerifyOrderResult a)
+collectUnExpectedOrder calledValues expectedValues =
+  catMaybes $ mapWithIndex (\i expectedValue -> do
+    let calledValue = unsafeIndex calledValues i
+    guard $ expectedValue /= calledValue
+    pure {index: i, calledValue, expectedValue}
+  ) expectedValues
 
 unsafeIndex :: forall a. Array a -> Int -> a
 unsafeIndex arr idx =
@@ -459,15 +467,16 @@ isOrderNotMatched calledValues expectedValues =
   )
   (Just calledValues) expectedValues
 
-verifyFailedSequence :: Array VerifyFailed -> VerifyFailed
-verifyFailedSequence fails = VerifyFailed $ joinWith "\n" $ A.cons "Function was not called with expected order." $ unwrap <$> fails
+verifyFailedSequence :: forall a. Show a => Array (VerifyOrderResult a) -> VerifyFailed
+verifyFailedSequence fails = 
+  VerifyFailed $ joinWith "\n" $ A.cons "Function was not called with expected order." $ verifyOrderFailedMesssage <$> fails
 
-verifyOrderFailedMesssage :: forall a. Show a => Int -> a -> a -> VerifyFailed
-verifyOrderFailedMesssage index calledParam expected = 
+verifyOrderFailedMesssage :: forall a. Show a => VerifyOrderResult a -> String
+verifyOrderFailedMesssage {index, calledValue, expectedValue} = 
   let callCount = showHumanReadable (index + 1)
-  in VerifyFailed $ joinWith "\n" 
-    ["  expected " <> callCount <> " call: " <> show expected, 
-     "  but was  " <> callCount <> " call: " <> show calledParam]
+  in joinWith "\n" 
+    ["  expected " <> callCount <> " call: " <> show expectedValue, 
+     "  but was  " <> callCount <> " call: " <> show calledValue]
   where 
   showHumanReadable :: Int -> String
   showHumanReadable 1 = "1st"

@@ -128,6 +128,100 @@ expected: >= 4
 but was : 3
 </pre>
 
+## Verifying function call sequential order
+### Strict call order valification
+verifySequence` verifies that the functions were called in the specified order.
+
+For all calls to the function, it is verified that the order and values are exactly the same.
+```haskell
+import Prelude
+
+import Test.PMock (any, fun, mock, verifySequence, (:>))
+import Test.Spec (Spec, describe, it)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "verify exactly sequential order" do
+      let
+        m = mock $ any :> unit
+        -- function call 3 times.
+        _ = fun m "a"
+        _ = fun m "b"
+        _ = fun m "c"
+
+      -- verify OK
+      verifySequence m [
+        "a",
+        "b",
+        "c"
+      ]
+```
+If the verification fails, you will know the order of the calls that failed to verification and the expected and actual values at that order.
+
+For example, suppose the expected value in the above example is as follows.
+```haskell
+verifySequence m [
+  "b",
+  "c",
+  "a"
+]
+```
+Then the verification fails and the following message appears.
+<pre style="color: #D2706E">
+Function was not called with expected order.
+expected 1st call: "b"
+but was  1st call: "a"
+expected 2nd call: "c"
+but was  2nd call: "b"
+expected 3rd call: "a"
+but was  3rd call: "c"
+</pre>
+### Partial call order valification
+`verifyPartiallySequence` verifies that the functions were called in a specific order.
+
+Unlike `verifySequence`, it is not necessary that all calls match exactly. As long as the order matches, the verification succeeds. For example, the following will verify that the calls were made in the order `"a"`,`"c"`.
+```haskell
+import Prelude
+
+import Test.PMock (any, fun, mock, verifyPartiallySequence, (:>))
+import Test.Spec (Spec, describe, it)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "verify partially sequential order" do
+      let
+        m = mock $ any :> unit
+        _ = fun m "a"
+        _ = fun m "b"
+        _ = fun m "c"
+
+      verifyPartiallySequence m [
+        "a",
+        "c"
+      ]
+```
+If the verification fails, the expected calling order and the actual calling order are all displayed.
+For example, suppose in the above example the expected values are as follows.
+```haskell
+verifySequence m [
+  "c",
+  "a"
+]
+```
+Then the verification fails and the following message appears.
+<pre style="color: #D2706E" >
+Function was not called with expected order.
+expected order:
+  "c"
+  "a"
+actual order:
+  "a"
+  "b"
+  "c"
+</pre>
+
 ## Matcher
 Matchers allow flexibility in setting and verifying expected arguments.
 By default, a matcher is used to verify that the values are identical, but you can specify a matcher that accepts arbitrary values, for example
@@ -168,7 +262,7 @@ spec = do
 ```
 This verifies that the function has never been called with any value combination.
 
-## Custom Matcher
+### Custom Matcher
 Can also define your own matchers by using the `matcher` function.
 The following is an example of a matcher that allows integer values greater than 2020.
 ```haskell
@@ -216,7 +310,7 @@ By default, verify will succeed if any one of the multiple calls is called with 
 
 If you do not use any matcher, such as `mock $ "Name" :> 100`, you would not need to use `MatchAll` because you would not verify anything but the exact matching input.
 
-## Other Built-in Matchers
+### Other Built-in Matchers
 The `or` allows any of several values, as in the following example.
 ```haskell
 import Prelude
@@ -347,7 +441,7 @@ spec = do
       m = mock $ "Aja" :> 1977
     fun m "Asia" `shouldEqual` 1977
 ```
-<pre>
+<pre style="color: #D2706E">
 Error: Function was not called with expected arguments.
   expected: "Aja"
   but was : "Asia"
@@ -382,7 +476,7 @@ spec = do
       m = mock $ "Aja" :> 1977
     fun m "Asia" `shouldEqual` 1977
 ```
-<pre>
+<pre style="color: #D2706E">
 ✗ catch runtime error example:
 
 Error: Function was not called with expected arguments.
