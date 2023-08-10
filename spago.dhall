@@ -4,8 +4,10 @@
 , dependencies =
   [ "aff"
   , "arrays"
+  , "control"
   , "effect"
   , "exceptions"
+  , "foldable-traversable"
   , "maybe"
   , "newtype"
   , "partial"

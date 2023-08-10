@@ -4,13 +4,12 @@ import Prelude
 
 import Control.Monad.Except (class MonadError)
 import Control.Monad.State (StateT, runStateT)
-import Data.Array (fold)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Data.Show.Generic (genericShow)
 import Effect.Aff (Aff, Error)
-import Test.PMock (CountVerifyMethod(..), Param, VerifyMatchType(..), and, any, fun, matcher, mock, mockFun, not, or, param, verify, verifyCount, verifySequence, (:>))
+import Test.PMock (CountVerifyMethod(..), Param, VerifyMatchType(..), and, any, fun, matcher, mock, mockFun, not, or, verify, verifyCount, verifyPartiallySequence, verifySequence, (:>))
 import Test.PMockSpecs (mockIt, runRuntimeThrowableFunction)
 import Test.Spec (Spec, SpecT, describe, it)
 import Test.Spec.Assertions (expectError, shouldEqual)
@@ -643,26 +642,61 @@ pmockSpec = do
             "c" :> 3
           ]
         }
+
+        mockOrderTest {
+          name: "number of function calls doesn't match the number of params", 
+          create: \_ -> mock $ any :> unit,
+          execute: \m -> do
+            let
+              _ = fun m "a"
+            unit,
+          verifyMock: \m -> verifySequence m [
+            "a"
+          ],
+          verifyFailed: \m -> verifySequence m [
+            "a",
+            "b"
+          ]
+        }
       
-      -- describe "Verify partially sequential order." do
-      --   mockOrderTest {
-      --     name: "1 Arguments", 
-      --     create: \_ -> mock $ any :> unit,
-      --     execute: \m -> do
-      --       let
-      --         _ = fun m "a"
-      --         _ = fun m "b"
-      --         _ = fun m "c"
-      --       unit,
-      --     verifyMock: \m -> verifyPartiallySequence m [
-      --       "a",
-      --       "c"
-      --     ],
-      --     verifyFailed: \m -> verifyPartiallySequence m [
-      --       "b",
-      --       "a"
-      --     ]
-      --   }
+      describe "Verify partially sequential order." do
+        mockOrderTest {
+          name: "1 Arguments", 
+          create: \_ -> mock $ any :> unit,
+          execute: \m -> do
+            let
+              _ = fun m "a"
+              _ = fun m "b"
+              _ = fun m "c"
+            unit,
+          verifyMock: \m -> verifyPartiallySequence m [
+            "a",
+            "c"
+          ],
+          verifyFailed: \m -> verifyPartiallySequence m [
+            "b",
+            "a"
+          ]
+        }
+
+        mockOrderTest {
+          name: "Uncalled value specified.", 
+          create: \_ -> mock $ any :> unit,
+          execute: \m -> do
+            let
+              _ = fun m "a"
+              _ = fun m "b"
+              _ = fun m "c"
+            unit,
+          verifyMock: \m -> verifyPartiallySequence m [
+            "b",
+            "c"
+          ],
+          verifyFailed: \m -> verifyPartiallySequence m [
+            "a",
+            "d"
+          ]
+        }
 
 
     mockTest {
