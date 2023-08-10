@@ -260,7 +260,7 @@ spec = do
     verifyCount m 0 $ (any :: Param String) :> (any :: Param Int)
 
     -- In PureScript v0.15.10 or later, you can write.
-    -- verifyCount m 0 $ any@String :> any@Int
+    -- verifyCount m 0 $ any @String :> any @Int
 ```
 This verifies that the function has never been called with any value combination.
 Annotated to make the type explicit.

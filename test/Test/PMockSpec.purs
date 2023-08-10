@@ -719,7 +719,7 @@ pmockSpec = do
     describe "Monad" do
       it "Return Monad." do
         let
-          m = mock $ "Article Id" :> pure@Aff { title: "Article Title" }
+          m = mock $ "Article Id" :> pure @Aff { title: "Article Title" }
 
         result <- fun m "Article Id"
 
@@ -729,7 +729,7 @@ pmockSpec = do
       
       it "Return Monad(update)." do
         let
-          updateMock = mock $ "New Title" :> pure@(StateT State Aff) unit
+          updateMock = mock $ "New Title" :> pure @(StateT State Aff) unit
         _ <- runStateT (fun updateMock "New Title") {article: {title: "Old Title"}} 
         verify updateMock "New Title"
 

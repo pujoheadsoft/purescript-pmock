@@ -264,7 +264,7 @@ spec = do
     verifyCount m 0 $ (any :: Param String) :> (any :: Param Int)
 
     -- PureScript v0.15.10 以降では次のようにも書けます
-    -- verifyCount m 0 $ any@String :> any@Int
+    -- verifyCount m 0 $ any @String :> any @Int
 ```
 この例は、関数がどのような値の組み合わせでも呼ばれていないことを確認する例です。
 型を明示するために型アノテーションを付けています。
