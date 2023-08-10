@@ -236,14 +236,13 @@ spec :: Spec Unit
 spec = do
   it "any match example" do
     let
-      m = mock $ (any :: Param String) :> 2023 :> false
+      m = mock $ any :> 2023 :> false
       
     fun m "Title1"  2023 `shouldEqual` false -- OK
     fun m "Another" 2023 `shouldEqual` false -- OK
     fun m ""        2023 `shouldEqual` false -- OK
 ```
 `any` allows the built-in matcher to accept arbitrary values.
-When used, it must be annotated with a type annotation to make the type explicit.
 
 This matcher can also be used for verify.
 ```haskell
@@ -259,8 +258,12 @@ spec = do
       m = mock $ "Title" :> 2023 :> false
       
     verifyCount m 0 $ (any :: Param String) :> (any :: Param Int)
+
+    -- In PureScript v0.15.10 or later, you can write.
+    -- verifyCount m 0 $ any@String :> any@Int
 ```
 This verifies that the function has never been called with any value combination.
+Annotated to make the type explicit.
 
 ### Custom Matcher
 Can also define your own matchers by using the `matcher` function.
@@ -298,7 +301,7 @@ spec :: Spec Unit
 spec = do
   it "any match example" do
     let
-      m = mock $ "Title" :> (any :: Param Int) :> false
+      m = mock $ "Title" :> any :> false
 
       _ = fun m "Title" 2020
       _ = fun m "Title" 2001

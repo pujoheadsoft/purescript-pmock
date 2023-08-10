@@ -240,14 +240,13 @@ spec :: Spec Unit
 spec = do
   it "any match example" do
     let
-      m = mock $ (any :: Param String) :> 2023 :> false
+      m = mock $ any :> 2023 :> false
       
     fun m "Title1"  2023 `shouldEqual` false -- OK
     fun m "Another" 2023 `shouldEqual` false -- OK
     fun m ""        2023 `shouldEqual` false -- OK
 ```
 `any`は、組み込み型のMatcherで、任意の値を受け取れるようにするものです。
-使用する場合は、型を明示するために型アノテーションを付ける必要があります。
 
 Matcherは、`verify`にも使用できます。
 ```haskell
@@ -263,8 +262,12 @@ spec = do
       m = mock $ "Title" :> 2023 :> false
       
     verifyCount m 0 $ (any :: Param String) :> (any :: Param Int)
+
+    -- PureScript v0.15.10 以降では次のようにも書けます
+    -- verifyCount m 0 $ any@String :> any@Int
 ```
 この例は、関数がどのような値の組み合わせでも呼ばれていないことを確認する例です。
+型を明示するために型アノテーションを付けています。
 
 ### Custom Matcher
 `matcher` 関数を使って独自のMatcherを定義することができます。
@@ -303,7 +306,7 @@ spec :: Spec Unit
 spec = do
   it "any match example" do
     let
-      m = mock $ "Title" :> (any :: Param Int) :> false
+      m = mock $ "Title" :> any :> false
 
       _ = fun m "Title" 2020
       _ = fun m "Title" 2001
