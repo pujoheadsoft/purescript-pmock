@@ -9,7 +9,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Data.Show.Generic (genericShow)
 import Effect.Aff (Aff, Error)
-import Test.PMock (CountVerifyMethod(..), Param, VerifyMatchType(..), and, any, fun, matcher, mock, mockFun, not, or, verify, verifyCount, verifyPartiallySequence, verifySequence, (:>))
+import Test.PMock (CountVerifyMethod(..), VerifyMatchType(..), and, any, fun, matcher, mock, mockFun, not, or, verify, verifyCount, verifyPartiallySequence, verifySequence, (:>))
 import Test.PMockSpecs (mockIt, runRuntimeThrowableFunction)
 import Test.Spec (Spec, SpecT, describe, it)
 import Test.Spec.Assertions (expectError, shouldEqual)
@@ -455,7 +455,7 @@ pmockSpec = do
     describe "Matcher" do
       mockTest {
         name: "Handling Arbitrary Arguments.", 
-        create: \_ -> mock $ (any :: Param String) :> 11,
+        create: \_ -> mock $ any :> 11,
         expected: [11, 11, 11], 
         execute: \m -> [fun m "1233", fun m "1234", fun m "2234"],
         executeFailed: Nothing,
@@ -470,8 +470,8 @@ pmockSpec = do
         expected: 11, 
         execute: \m -> fun m "1234",
         executeFailed: Just \m -> fun m "1233",
-        verifyMock: \m -> verify m (any :: Param String),
-        verifyCount: \m c -> verifyCount m c (any :: Param String),
+        verifyMock: \m -> verify m (any @String),
+        verifyCount: \m c -> verifyCount m c (any @String),
         verifyFailed: \m -> verify m "not called param"
       }
 
@@ -554,7 +554,7 @@ pmockSpec = do
 
       it "Arbitrary Arguments All Match Arg1" do
         let
-          m = mock $ (any :: Param Int) :> 100
+          m = mock $ any :> 100
 
           _ = fun m 30
           _ = fun m 40
@@ -563,7 +563,7 @@ pmockSpec = do
 
       it "Arbitrary Arguments All Match Arg2" do
         let
-          m = mock $ "Title" :> (any :: Param Int) :> false
+          m = mock $ "Title" :> any :> false
 
           _ = fun m "Title" 2020
           _ = fun m "Title" 2001

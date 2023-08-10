@@ -9,7 +9,6 @@
   , "exceptions"
   , "foldable-traversable"
   , "maybe"
-  , "newtype"
   , "partial"
   , "prelude"
   , "spec"

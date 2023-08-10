@@ -79,7 +79,7 @@ newtype Matcher v = Matcher (v -> v -> Boolean)
 anyMatcher :: forall a. a -> a -> Boolean
 anyMatcher _ _ = true
 
-any :: forall a. Param a
+any :: forall @a. Param a
 any = unsafeCoerce (Param "any" $ Just $ Matcher anyMatcher)
 
 matcher :: forall a. (a -> Boolean) -> String -> Param a
