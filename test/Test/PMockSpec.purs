@@ -25,7 +25,7 @@ type Fixture mock r m = {
   verifyFailed :: mock -> m Unit
 }
 
-type OrderVerifyFixture mock r m = {
+type VerifyOrderFixture mock r m = {
   name :: String,
   create :: Unit -> mock,
   execute :: mock -> r,
@@ -70,15 +70,15 @@ mockTest f = describe f.name do
       _ = f.execute m
     f.verifyCount m 3
 
-mockOrderTest :: forall mock m g r. Monad m => Eq r => Show r => MonadError Error g => OrderVerifyFixture mock r g -> SpecT g Unit m Unit
+mockOrderTest :: forall mock m g r. Monad m => Eq r => Show r => MonadError Error g => VerifyOrderFixture mock r g -> SpecT g Unit m Unit
 mockOrderTest f = describe f.name do
-  it "Verify that the call was made with the set arguments." do
+  it "Verify call was made with set order." do
     let 
       m = f.create unit
       _ = f.execute m
     f.verifyMock m
 
-  it "Verify fails if the call is made with arguments different from those set." do
+  it "Verify fails if call with order different set order." do
     let 
       m = f.create unit
       _ = f.execute m
@@ -570,35 +570,6 @@ pmockSpec = do
 
         verify m $ MatchAll $ "Title" :> matcher (_ > 2000) "> 2000"
 
-    describe "Utility" do
-      it "Create mock functions directly." do
-        let
-          fn = mockFun $ "a" :> true :> 300
-        fn "a" true `shouldEqual` 300
-      mockIt "Supplemental runtime exceptions `it`" \_ -> do
-        let
-          m = mock $ 1 :> 2
-        -- If you change the following values to values different from the expected values, you will see that you have supplemented the exception.
-        fun m 1 `shouldEqual` 2
-
-    -- Type annotation is required depending on the monad to be returned.
-    describe "Monad" do
-      it "Return Monad." do
-        let
-          m = mock $ "Article Id" :> (pure { title: "Article Title" } :: Aff Article)
-
-        result <- fun m "Article Id"
-
-        result `shouldEqual` {title: "Article Title"}
-        
-        verify m "Article Id"
-      
-      it "Return Monad(update)." do
-        let
-          updateMock = mock $ "New Title" :> (pure unit :: StateT State Aff Unit)
-        _ <- runStateT (fun updateMock "New Title") {article: {title: "Old Title"}} 
-        verify updateMock "New Title"
-
     describe "Order Verification" do
       describe "Verify exactly sequential order." do
         mockOrderTest {
@@ -680,6 +651,25 @@ pmockSpec = do
         }
 
         mockOrderTest {
+          name: "2 Arguments", 
+          create: \_ -> mock $ any :> any :> unit,
+          execute: \m -> do
+            let
+              _ = fun m "a" true
+              _ = fun m "b" false
+              _ = fun m "c" true
+            unit,
+          verifyMock: \m -> verifyPartiallySequence m [
+            "a" :> true,
+            "c" :> true
+          ],
+          verifyFailed: \m -> verifyPartiallySequence m [
+            "b" :> false,
+            "a" :> true
+          ]
+        }
+
+        mockOrderTest {
           name: "Uncalled value specified.", 
           create: \_ -> mock $ any :> unit,
           execute: \m -> do
@@ -698,6 +688,50 @@ pmockSpec = do
           ]
         }
 
+        mockOrderTest {
+          name: "number of function calls doesn't match the number of params", 
+          create: \_ -> mock $ any :> unit,
+          execute: \m -> do
+            let
+              _ = fun m "a"
+            unit,
+          verifyMock: \m -> verifyPartiallySequence m [
+            "a"
+          ],
+          verifyFailed: \m -> verifyPartiallySequence m [
+            "a",
+            "b"
+          ]
+        }
+
+    describe "Utility" do
+      it "Create mock functions directly." do
+        let
+          fn = mockFun $ "a" :> true :> 300
+        fn "a" true `shouldEqual` 300
+      mockIt "Supplemental runtime exceptions `it`" \_ -> do
+        let
+          m = mock $ 1 :> 2
+        -- If you change the following values to values different from the expected values, you will see that you have supplemented the exception.
+        fun m 1 `shouldEqual` 2
+
+    -- Type annotation is required depending on the monad to be returned.
+    describe "Monad" do
+      it "Return Monad." do
+        let
+          m = mock $ "Article Id" :> (pure { title: "Article Title" } :: Aff Article)
+
+        result <- fun m "Article Id"
+
+        result `shouldEqual` {title: "Article Title"}
+        
+        verify m "Article Id"
+      
+      it "Return Monad(update)." do
+        let
+          updateMock = mock $ "New Title" :> (pure unit :: StateT State Aff Unit)
+        _ <- runStateT (fun updateMock "New Title") {article: {title: "Old Title"}} 
+        verify updateMock "New Title"
 
     mockTest {
       name: "ADT", 
