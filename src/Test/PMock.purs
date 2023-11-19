@@ -1,23 +1,23 @@
 module Test.PMock
-  ( module Test.PMock.Cons
-  , module Test.PMock.Param
-  , class MockBuilder
-  , mock
-  , verify
-  , class VerifyCount
-  , verifyCount
-  , class Verify
-  , Verifier
-  , showCalledParams
+  ( CountVerifyMethod(..)
   , Mock
-  , CountVerifyMethod(..)
-  , fun
-  , mockFun
   , VerifyMatchType(..)
-  , verifySequence
-  , verifyPartiallySequence
+  , class MockBuilder
+  , class Verify
+  , class VerifyCount
   , class VerifyOrder
-  ) where
+  , fun
+  , mock
+  , mockFun
+  , module Test.PMock.Cons
+  , module Test.PMock.Param
+  , showCalledParams
+  , verify
+  , verifyCount
+  , verifyPartiallySequence
+  , verifySequence
+  )
+  where
 
 import Prelude
 
@@ -239,6 +239,7 @@ findReturnValue paramsList inputParams = do
 
 findReturnValueWithStore :: forall params args r.
      Eq args
+  => Show args
   => ParamDivider params args (Param r)
   => CalledParamsList params
   -> args
@@ -247,9 +248,11 @@ findReturnValueWithStore :: forall params args r.
 findReturnValueWithStore paramsList inputParams s =
   let
     _ = storeCalledParams s inputParams
+    expectedArgs = args <$> paramsList
   in case findReturnValue paramsList inputParams of
     Just v -> v
-    Nothing -> error "no answer found."
+    --Nothing -> error $ "no answer found for arguments " <> show expectedArgs
+    Nothing -> error $ messageForMultiMock expectedArgs inputParams
 
 fun :: forall fun v. Mock fun v -> fun
 fun (Mock f _) = f
@@ -368,7 +371,29 @@ showCalledParams (Mock _ (Verifier calledParamsList)) = show calledParamsList
   but was : 1, "1", 1
 -}
 message :: forall a. Show a => a -> a -> String
-message expected actual = joinWith "\n" ["Function was not called with expected arguments.",  "  expected: " <> show expected, "  but was : " <> show actual]
+message expected actual =
+  joinWith "\n" [
+    "Function was not called with expected arguments.",
+    "  expected: " <> show expected,
+    "  but was : " <> show actual
+  ]
+
+{-
+  Function was not called with expected arguments.
+  expected one of the following:
+    "a", 100
+    "b", 200
+  but was actual: "a", 200
+-}
+messageForMultiMock :: forall a. Show a => Array a -> a -> String
+messageForMultiMock expecteds actual =
+  joinWith "\n" [
+    "Function was not called with expected arguments.",
+    "  expected one of the following:",
+    joinWith "\n" $ ("    " <> _) <<< show <$> expecteds,
+    "  but was:",
+    ("    " <> _) <<< show $ actual
+  ]
 
 error :: forall a. String -> a
 error = unsafePerformEffect <<< throw
