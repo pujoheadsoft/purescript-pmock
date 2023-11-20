@@ -63,10 +63,34 @@ spec = do
 ```
 verifyに失敗した場合、以下のようなメッセージが出力されます。
 <pre style="color: #D2706E">
-Function was not called with expected arguments.
+function was not called with expected arguments.
 expected: "Another Title",2022
 but was : "Title",2023
 </pre>
+## モック関数に名前を付ける
+`namedMockFun`や`namedMock`を使うとモック関数に名前をつけることができます。
+この名前は、モック関数の呼び出しやverifyに失敗した場合のメッセージに使用されます。
+モック関数を複数使用していて、どのモック関数の呼び出しに失敗したか知りたい場合に便利です。
+```haskell
+import Prelude
+
+import Test.PMock (namedMockFun, (:>))
+import Test.Spec (Spec, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  it "named mock function test" do
+    let
+      f = namedMockFun "namedMock" $ "a" :> true :> 100
+    100 `shouldEqual` f "b" true
+```
+<pre>
+Error: function `namedMock` was not called with expected arguments.
+  expected: "a",true
+  but was : "b",true
+</pre>
+
 ## 呼び出し回数の検証
 `verifyCount` を使うと、モック関数が呼び出された回数を検証することができます。
 
@@ -90,7 +114,7 @@ spec = do
 <pre style="color: #D2706E">
 ✗ verify count example:
 
-Function was not called the expected number of times.
+function was not called the expected number of times.
 expected: 1
 but was : 0
 </pre>
@@ -126,7 +150,7 @@ spec = do
 ```
 回数が一致しない場合は以下のようなメッセージが出力されます。
 <pre style="color: #D2706E">
-Function was not called the expected number of times.
+function was not called the expected number of times.
 expected: >= 4
 but was : 3
 </pre>
@@ -172,7 +196,7 @@ verifySequence m [
 ```
 すると検証に失敗し、次のようなメッセージが表示されます。
 <pre style="color: #D2706E">
-Function was not called with expected order.
+function was not called with expected order.
 expected 1st call: "b"
 but was  1st call: "a"
 expected 2nd call: "c"
@@ -215,7 +239,7 @@ verifySequence m [
 ```
 すると次のようなメッセージが表示されます。
 <pre style="color: #D2706E">
-Function was not called with expected order.
+function was not called with expected order.
 expected order:
   "c"
   "a"
@@ -453,7 +477,7 @@ spec = do
     fun m "Asia" `shouldEqual` 1977
 ```
 <pre style="color: #D2706E">
-Error: Function was not called with expected arguments.
+Error: function was not called with expected arguments.
   expected: "Aja"
   but was : "Asia"
     at Module.error (file:///home/source/purescript-pmock/output/Effect.Exception/foreign.js:6:10)
@@ -491,7 +515,7 @@ spec = do
 <pre style="color: #D2706E">
 ✗ catch runtime error example:
 
-Error: Function was not called with expected arguments.
+Error: function was not called with expected arguments.
 expected: "Aja"
 but was : "Asia"
 </pre>

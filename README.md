@@ -65,6 +65,31 @@ Function was not called with expected arguments.
 expected: "Another Title",2022
 but was : "Title",2023
 </pre>
+
+## Naming a mock function
+You can name your mock functions with the `namedMockFun` and `namedMock` functions.
+This name is used for messages when a mock function fails to call or verify.
+This is useful if you are using multiple mock functions and want to know which mock function failed to call.
+```haskell
+import Prelude
+
+import Test.PMock (namedMockFun, (:>))
+import Test.Spec (Spec, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  it "named mock function test" do
+    let
+      f = namedMockFun "namedMock" $ "a" :> true :> 100
+    100 `shouldEqual` f "b" true
+```
+<pre>
+Error: function `namedMock` was not called with expected arguments.
+  expected: "a",true
+  but was : "b",true
+</pre>
+
 ## Verifying the number of function calls
 `verifyCount` can be used to verify the number of times a mock function has been called.
 This allows you to verify that a function has not been called.
