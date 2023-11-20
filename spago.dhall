@@ -6,6 +6,7 @@
   , "arrays"
   , "control"
   , "effect"
+  , "either"
   , "exceptions"
   , "foldable-traversable"
   , "maybe"

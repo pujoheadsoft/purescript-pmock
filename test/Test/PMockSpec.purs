@@ -8,9 +8,10 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Data.Show.Generic (genericShow)
+import Data.String (joinWith)
 import Effect.Aff (Aff, Error)
-import Test.PMock (CountVerifyMethod(..), VerifyMatchType(..), and, any, fun, matcher, mock, mockFun, not, or, verify, verifyCount, verifyPartiallySequence, verifySequence, (:>))
-import Test.PMockSpecs (mockIt, runRuntimeThrowableFunction)
+import Test.PMock (CountVerifyMethod(..), VerifyMatchType(..), and, any, fun, matcher, mock, mockFun, namedMock, not, or, verify, verifyCount, verifyPartiallySequence, verifySequence, (:>))
+import Test.PMockSpecs (expectErrorWithMessage, mockIt, runRuntimeThrowableFunction)
 import Test.Spec (Spec, SpecT, describe, it)
 import Test.Spec.Assertions (expectError, shouldEqual)
 
@@ -744,17 +745,232 @@ pmockSpec = do
       verifyFailed: \m -> verify m (Data2 "data1")
     }
 
-    describe "Cons" do
-      describe "Show" do
-        it "2 arguments" do
-          show (10 :> true) `shouldEqual` "10,true"
-        it "3 arguments" do
-          show ("1" :> false :> [3, 4]) `shouldEqual` "\"1\",false,[3,4]"
-      describe "Eq" do
-        it "2 arguments" do
-          (1 :> "2") `shouldEqual` (1 :> "2")
-        it "3 arguments" do
-          ("1" :> false :> [3, 4]) `shouldEqual` ("1" :> false :> [3, 4])
+  describe "Appropriate message when a test fails." do
+    describe "anonymous mock" do
+      describe "call" do
+        it "simple mock"  do
+          let
+            m = mock $ "a" :> 100
+            expected = joinWith "\n" [
+              "Error: function was not called with expected arguments.",
+              "  expected: \"a\"",
+              "  but was : \"b\""
+            ]
+          expectErrorWithMessage expected $ runRuntimeThrowableFunction \_ -> fun m "b"
+
+        it "multi mock" do
+          let
+            m = mock [
+              "aaa" :> 100 :> true,
+              "bbb" :> 200 :> false
+            ]
+            expected = joinWith "\n" [
+              "Error: function was not called with expected arguments.",
+              "  expected one of the following:",
+              "    \"aaa\",100",
+              "    \"bbb\",200",
+              "  but was actual:",
+              "    \"aaa\",200"
+            ]
+          expectErrorWithMessage expected $ runRuntimeThrowableFunction \_ -> fun m "aaa" 200
+
+      describe "verify" do
+        it "simple mock verify" do
+          let
+            m = mock $ any@String :> 100
+            _ = fun m "A"
+            expected = joinWith "\n" [
+              "function was not called with expected arguments.",
+              "  expected: \"X\"",
+              "  but was : \"A\""
+            ]
+          expectErrorWithMessage expected $ verify m "X"
+
+        it "verify count" do
+          let
+            m = mock $ any@String :> 100
+            _ = fun m "A"
+            expected = joinWith "\n" [
+              "function was not called the expected number of times.",
+              "  expected: 2",
+              "  but was : 1"
+            ]
+          expectErrorWithMessage expected $ verifyCount m 2 "A"
+
+        it "verifySequence" do
+          let
+            m = mock $ any@String :> 100
+            _ = fun m "B"
+            _ = fun m "C"
+            _ = fun m "A"
+            expected = joinWith "\n" [
+              "function was not called with expected order.",
+              "  expected 1st call: \"A\"",
+              "  but was  1st call: \"B\"",
+              "  expected 2nd call: \"B\"",
+              "  but was  2nd call: \"C\"",
+              "  expected 3rd call: \"C\"",
+              "  but was  3rd call: \"A\""
+            ]
+          expectErrorWithMessage expected $ verifySequence m ["A", "B", "C"]
+        
+        it "verifySequence (count mismatch)" do
+          let
+            m = mock $ any@String :> 100
+            _ = fun m "B"
+            _ = fun m "C"
+            expected = joinWith "\n" [
+              "The number of function calls doesn't match the number of params.",
+              "  number of function calls: 2",
+              "  number of params:         3"
+            ]
+          expectErrorWithMessage expected $ verifySequence m ["A", "B", "C"]
+        
+        it "verifyPartiallySequence" do
+          let
+            m = mock $ any@String :> 100
+            _ = fun m "B"
+            _ = fun m "A"
+            expected = joinWith "\n" [
+              "function was not called with expected order.",
+              "  expected order:",
+              "    \"A\"",
+              "    \"C\"",
+              "  actual order:",
+              "    \"B\"",
+              "    \"A\""
+            ]
+          expectErrorWithMessage expected $ verifyPartiallySequence m ["A", "C"]
+
+        it "verifyPartiallySequence (count mismatch)" do
+          let
+            m = mock $ any@String :> 100
+            _ = fun m "B"
+            expected = joinWith "\n" [
+              "The number of parameters exceeds the number of function calls.",
+              "  number of function calls: 1",
+              "  number of params:         2"
+            ]
+          expectErrorWithMessage expected $ verifyPartiallySequence m ["A", "C"]
+
+    describe "named mock" do
+      describe "call" do
+        it "simple mock"  do
+          let
+            m = namedMock "mock function" $ "a" :> 100
+            expected = joinWith "\n" [
+              "Error: function `mock function` was not called with expected arguments.",
+              "  expected: \"a\"",
+              "  but was : \"b\""
+            ]
+          expectErrorWithMessage expected $ runRuntimeThrowableFunction \_ -> fun m "b"
+
+        it "multi mock" do
+          let
+            m = namedMock "mock function" [
+              "aaa" :> 100 :> true,
+              "bbb" :> 200 :> false
+            ]
+            expected = joinWith "\n" [
+              "Error: function `mock function` was not called with expected arguments.",
+              "  expected one of the following:",
+              "    \"aaa\",100",
+              "    \"bbb\",200",
+              "  but was actual:",
+              "    \"aaa\",200"
+            ]
+          expectErrorWithMessage expected $ runRuntimeThrowableFunction \_ -> fun m "aaa" 200
+
+      describe "verify" do
+        it "simple mock verify" do
+          let
+            m = namedMock "mock function" $ any@String :> 100
+            _ = fun m "A"
+            expected = joinWith "\n" [
+              "function `mock function` was not called with expected arguments.",
+              "  expected: \"X\"",
+              "  but was : \"A\""
+            ]
+          expectErrorWithMessage expected $ verify m "X"
+
+        it "verify count" do
+          let
+            m = namedMock "mock function" $ any@String :> 100
+            _ = fun m "A"
+            expected = joinWith "\n" [
+              "function `mock function` was not called the expected number of times.",
+              "  expected: 2",
+              "  but was : 1"
+            ]
+          expectErrorWithMessage expected $ verifyCount m 2 "A"
+
+        it "verifySequence" do
+          let
+            m = namedMock "mock function" $ any@String :> 100
+            _ = fun m "B"
+            _ = fun m "C"
+            _ = fun m "A"
+            expected = joinWith "\n" [
+              "function `mock function` was not called with expected order.",
+              "  expected 1st call: \"A\"",
+              "  but was  1st call: \"B\"",
+              "  expected 2nd call: \"B\"",
+              "  but was  2nd call: \"C\"",
+              "  expected 3rd call: \"C\"",
+              "  but was  3rd call: \"A\""
+            ]
+          expectErrorWithMessage expected $ verifySequence m ["A", "B", "C"]
+        
+        it "verifySequence (count mismatch)" do
+          let
+            m = namedMock "mockFunc" $ any@String :> 100
+            _ = fun m "B"
+            _ = fun m "C"
+            expected = joinWith "\n" [
+              "The number of function `mockFunc` calls doesn't match the number of params.",
+              "  number of function calls: 2",
+              "  number of params:         3"
+            ]
+          expectErrorWithMessage expected $ verifySequence m ["A", "B", "C"]
+        
+        it "verifyPartiallySequence" do
+          let
+            m = namedMock "mock function" $ any@String :> 100
+            _ = fun m "B"
+            _ = fun m "A"
+            expected = joinWith "\n" [
+              "function `mock function` was not called with expected order.",
+              "  expected order:",
+              "    \"A\"",
+              "    \"C\"",
+              "  actual order:",
+              "    \"B\"",
+              "    \"A\""
+            ]
+          expectErrorWithMessage expected $ verifyPartiallySequence m ["A", "C"]
+
+        it "verifyPartiallySequence (count mismatch)" do
+          let
+            m = namedMock "mockFunc" $ any@String :> 100
+            _ = fun m "B"
+            expected = joinWith "\n" [
+              "The number of parameters exceeds the number of function `mockFunc` calls.",
+              "  number of function calls: 1",
+              "  number of params:         2"
+            ]
+          expectErrorWithMessage expected $ verifyPartiallySequence m ["A", "C"]
+
+  describe "Cons" do
+    describe "Show" do
+      it "2 arguments" do
+        show (10 :> true) `shouldEqual` "10,true"
+      it "3 arguments" do
+        show ("1" :> false :> [3, 4]) `shouldEqual` "\"1\",false,[3,4]"
+    describe "Eq" do
+      it "2 arguments" do
+        (1 :> "2") `shouldEqual` (1 :> "2")
+      it "3 arguments" do
+        ("1" :> false :> [3, 4]) `shouldEqual` ("1" :> false :> [3, 4])
 
 type Article = {
   title :: String
