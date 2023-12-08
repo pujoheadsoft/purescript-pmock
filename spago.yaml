@@ -1,0 +1,22 @@
+package:
+  dependencies:
+    - aff
+    - arrays
+    - control
+    - effect
+    - either
+    - exceptions
+    - foldable-traversable
+    - maybe
+    - partial
+    - prelude
+    - spec
+    - strings
+    - transformers
+    - unsafe-coerce
+  name: pmock
+workspace:
+  extra_packages: {}
+  package_set:
+    url: https://raw.githubusercontent.com/purescript/package-sets/psc-0.15.12-20231120/packages.json
+    hash: sha256-CQW7nOz5jxVtURPRhdDN3FGpZnJT00IKto1XSviDPMo=
