@@ -1,5 +1,8 @@
 # purescript-pmock
 
+[![Latest release](http://img.shields.io/github/release/pujoheadsoft/purescript-pmock.svg)](https://github.com/pujoheadsoft/purescript-pmock/releases)
+[![Pursuit](https://pursuit.purescript.org/packages/purescript-pmock/badge)](https://pursuit.purescript.org/packages/purescript-pmock)
+
 pmock is mocking library for PureScript
 
 [日本語版 README](https://github.com/pujoheadsoft/purescript-pmock/blob/master/README-ja.md)
