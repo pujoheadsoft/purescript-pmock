@@ -10,7 +10,7 @@ import Data.Maybe (Maybe(..))
 import Data.Show.Generic (genericShow)
 import Data.String (joinWith)
 import Effect.Aff (Aff, Error)
-import Test.PMock (CountVerifyMethod(..), VerifyMatchType(..), and, any, fun, matcher, mock, mockFun, namedMock, not, or, verify, verifyCount, hasNotBeenCalledWith, verifyPartiallySequence, verifySequence, (:>))
+import Test.PMock (CountVerifyMethod(..), VerifyMatchType(..), and, any, fun, hasBeenCalledTimes, hasBeenCalledTimesGreaterThan, hasBeenCalledTimesGreaterThanEqual, hasBeenCalledTimesLessThan, hasBeenCalledTimesLessThanEqual, hasBeenCalledWith, hasNotBeenCalledWith, matcher, mock, mockFun, namedMock, not, or, verifyCount, verifyPartiallySequence, verifySequence, with, (:>))
 import Test.PMockSpecs (expectErrorWithMessage, mockIt, runRuntimeThrowableFunction)
 import Test.Spec (Spec, SpecT, describe, it)
 import Test.Spec.Assertions (expectError, shouldEqual)
@@ -47,23 +47,23 @@ mockTest f = describe f.name do
         in expectError $ runRuntimeThrowableFunction (\_ -> func m)
       Nothing -> pure unit
 
-  it "Verify that the call was made with the set arguments." do
+  it "th`hasBeenCalledWith` at the call was made with the set arguments." do
     let 
       m = f.create unit
       _ = f.execute m
     f.verifyMock m
 
-  it "Verify fails if the call is made with arguments different from those set." do
+  it "fa`hasBeenCalledWith` ils if the call is made with arguments different from those set." do
     let 
       m = f.create unit
       _ = f.execute m
     expectError $ f.verifyFailed m
 
-  it "Verify the number of times it has been called with the set arguments (0 times)." do
+  it "th`hasBeenCalledWith` e number of times it has been called with the set arguments (0 times)." do
     let m = f.create unit
     f.verifyCount m 0
 
-  it "Verify the number of times it has been called with the set arguments (3 times)." do
+  it "th`hasBeenCalledWith` e number of times it has been called with the set arguments (3 times)." do
     let 
       m = f.create unit
       _ = f.execute m
@@ -73,13 +73,13 @@ mockTest f = describe f.name do
 
 mockOrderTest :: forall mock m g r. Monad m => Eq r => Show r => MonadError Error g => VerifyOrderFixture mock r g -> SpecT g Unit m Unit
 mockOrderTest f = describe f.name do
-  it "Verify call was made with set order." do
+  it "ca`hasBeenCalledWith` ll was made with set order." do
     let 
       m = f.create unit
       _ = f.execute m
     f.verifyMock m
 
-  it "Verify fails if call with order different set order." do
+  it "fa`hasBeenCalledWith` ils if call with order different set order." do
     let 
       m = f.create unit
       _ = f.execute m
@@ -96,9 +96,9 @@ pmockSpec = do
         expected: 1, 
         execute: \m -> fun m "1",
         executeFailed: Just \m -> fun m "2",
-        verifyMock: \m -> verify m "1",
-        verifyCount: \m c -> verifyCount m c "1",
-        verifyFailed: \m -> verify m "2"
+        verifyMock: \m -> m `hasBeenCalledWith` "1",
+        verifyCount: \m c -> m `hasBeenCalledTimes` c `with` "1",
+        verifyFailed: \m -> m `hasBeenCalledWith` "2"
       }
 
       mockTest {
@@ -107,9 +107,9 @@ pmockSpec = do
         expected: true, 
         execute: \m -> fun m 100 "1",
         executeFailed: Just \m -> fun m 100 "2",
-        verifyMock: \m -> verify m $ 100 :> "1",
-        verifyCount: \m c -> verifyCount m c $ 100 :> "1",
-        verifyFailed: \m -> verify m $ 100 :> "2"
+        verifyMock: \m -> m `hasBeenCalledWith` (100 :> "1"),
+        verifyCount: \m c -> m `hasBeenCalledTimes` c `with` (100 :> "1"),
+        verifyFailed: \m -> m `hasBeenCalledWith` (100 :> "2")
       }
 
       mockTest {
@@ -118,9 +118,9 @@ pmockSpec = do
         expected: 11.1, 
         execute: \m -> fun m 100 "1" true,
         executeFailed: Just \m -> fun m 100 "1" false,
-        verifyMock: \m -> verify m $ 100 :> "1" :> true,
-        verifyCount: \m c -> verifyCount m c $ 100 :> "1" :> true,
-        verifyFailed: \m -> verify m $ 100 :> "1" :> false
+        verifyMock: \m -> m `hasBeenCalledWith` (100 :> "1" :> true),
+        verifyCount: \m c -> m `hasBeenCalledTimes` c `with` (100 :> "1" :> true),
+        verifyFailed: \m -> m `hasBeenCalledWith` (100 :> "1" :> false)
       }
 
       mockTest {
@@ -129,9 +129,9 @@ pmockSpec = do
         expected: [1, 2], 
         execute: \m -> fun m 100 "1" true 11.1,
         executeFailed: Just \m -> fun m 100 "1" true 11.0,
-        verifyMock: \m -> verify m $ 100 :> "1" :> true :> 11.1,
-        verifyCount: \m c -> verifyCount m c $ 100 :> "1" :> true :> 11.1,
-        verifyFailed: \m -> verify m $ 100 :> "1" :> true :> 11.0
+        verifyMock: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1),
+        verifyCount: \m c -> m `hasBeenCalledTimes` c `with` (100 :> "1" :> true :> 11.1),
+        verifyFailed: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.0)
       }
 
       mockTest {
@@ -140,9 +140,9 @@ pmockSpec = do
         expected: {name: "Name"}, 
         execute: \m -> fun m 100 "1" true 11.1 [1, 2],
         executeFailed: Just \m -> fun m 100 "1" true 11.1 [1, 3],
-        verifyMock: \m -> verify m $ 100 :> "1" :> true :> 11.1 :> [1, 2],
-        verifyCount: \m c -> verifyCount m c $ 100 :> "1" :> true :> 11.1 :> [1, 2],
-        verifyFailed: \m -> verify m $ 100 :> "1" :> true :> 11.1 :> [2, 2]
+        verifyMock: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2]),
+        verifyCount: \m c -> m `hasBeenCalledTimes` c `with` (100 :> "1" :> true :> 11.1 :> [1, 2]),
+        verifyFailed: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [2, 2])
       }
 
       mockTest {
@@ -151,9 +151,9 @@ pmockSpec = do
         expected: 20, 
         execute: \m -> fun m 100 "1" true 11.1 [1, 2] {name: "Name"},
         executeFailed: Just \m -> fun m 100 "1" true 11.1 [1, 3] {name: "Nam"},
-        verifyMock: \m -> verify m $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"},
-        verifyCount: \m c -> verifyCount m c $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"},
-        verifyFailed: \m -> verify m $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Nome"}
+        verifyMock: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"}),
+        verifyCount: \m c -> m `hasBeenCalledTimes` c `with` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"}),
+        verifyFailed: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Nome"})
       }
 
       mockTest {
@@ -162,9 +162,9 @@ pmockSpec = do
         expected: "X", 
         execute: \m -> fun m 100 "1" true 11.1 [1, 2] {name: "Name"} 20,
         executeFailed: Just \m -> fun m 100 "1" true 11.1 [1, 3] {name: "Name"} 21,
-        verifyMock: \m -> verify m $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20,
-        verifyCount: \m c -> verifyCount m c $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20,
-        verifyFailed: \m -> verify m $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 19
+        verifyMock: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20),
+        verifyCount: \m c -> m `hasBeenCalledTimes` c `with` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20),
+        verifyFailed: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 19)
       }
 
       mockTest {
@@ -173,9 +173,9 @@ pmockSpec = do
         expected: false, 
         execute: \m -> fun m 100 "1" true 11.1 [1, 2] {name: "Name"} 20 "X",
         executeFailed: Just \m -> fun m 100 "1" true 11.1 [1, 3] {name: "Name"} 20 "Y",
-        verifyMock: \m -> verify m $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X",
-        verifyCount: \m c -> verifyCount m c $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X",
-        verifyFailed: \m -> verify m $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "Z"
+        verifyMock: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X"),
+        verifyCount: \m c -> m `hasBeenCalledTimes` c `with` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X"),
+        verifyFailed: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "Z")
       }
 
       mockTest {
@@ -184,9 +184,9 @@ pmockSpec = do
         expected: 0.1, 
         execute: \m -> fun m 100 "1" true 11.1 [1, 2] {name: "Name"} 20 "X" false,
         executeFailed: Just \m -> fun m 100 "1" true 11.1 [1, 3] {name: "Name"} 20 "X" true,
-        verifyMock: \m -> verify m $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X" :> false,
-        verifyCount: \m c -> verifyCount m c $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X" :> false,
-        verifyFailed: \m -> verify m $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X" :> true
+        verifyMock: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X" :> false),
+        verifyCount: \m c -> m `hasBeenCalledTimes` c `with` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X" :> false),
+        verifyFailed: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X" :> true)
       }
 
     describe "Multiple calls" do
@@ -205,14 +205,14 @@ pmockSpec = do
         ],
         executeFailed: Just \m -> [ fun m "3" ],
         verifyMock: \m -> do 
-          verify m "1"
-          verify m "2"
+          m `hasBeenCalledWith` "1"
+          m `hasBeenCalledWith` "2"
         ,
         verifyCount: \m c -> do
-          verifyCount m c "1"
-          verifyCount m c "2"
+          m `hasBeenCalledTimes` c `with` "1"
+          m `hasBeenCalledTimes` c `with` "2"
         ,
-        verifyFailed: \m -> verify m "3"
+        verifyFailed: \m -> m `hasBeenCalledWith` "3"
       }
 
       mockTest {
@@ -231,14 +231,14 @@ pmockSpec = do
         ],
         executeFailed: Just \m -> [ fun m "2" 10 ],
         verifyMock: \m -> do 
-          verify m $ "1" :> 10
-          verify m $ "2" :> 20
+          m `hasBeenCalledWith` ("1" :> 10)
+          m `hasBeenCalledWith` ("2" :> 20)
         ,
         verifyCount: \m c -> do
-          verifyCount m c $ "1" :> 10
-          verifyCount m c $ "2" :> 20
+          m `hasBeenCalledTimes` c `with` ("1" :> 10)
+          m `hasBeenCalledTimes` c `with` ("2" :> 20)
         ,
-        verifyFailed: \m -> verify m $ "1" :> 30
+        verifyFailed: \m -> m `hasBeenCalledWith` ("1" :> 30)
       }
 
       mockTest {
@@ -257,14 +257,14 @@ pmockSpec = do
         ],
         executeFailed: Just \m -> [ fun m "2" 20 true ],
         verifyMock: \m -> do 
-          verify m $ "1" :> 10 :> true
-          verify m $ "2" :> 20 :> false
+          m `hasBeenCalledWith` ("1" :> 10 :> true)
+          m `hasBeenCalledWith` ("2" :> 20 :> false)
         ,
         verifyCount: \m c -> do
-          verifyCount m c $ "1" :> 10 :> true
-          verifyCount m c $ "2" :> 20 :> false
+          m `hasBeenCalledTimes` c `with` ("1" :> 10 :> true)
+          m `hasBeenCalledTimes` c `with` ("2" :> 20 :> false)
         ,
-        verifyFailed: \m -> verify m $ "1" :> 10 :> false
+        verifyFailed: \m -> m `hasBeenCalledWith` ("1" :> 10 :> false)
       }
 
       mockTest {
@@ -283,14 +283,14 @@ pmockSpec = do
         ],
         executeFailed: Just \m -> [ fun m "2" 20 false "a1" ],
         verifyMock: \m -> do 
-          verify m $ "1" :> 10 :> true  :> "a1"
-          verify m $ "2" :> 20 :> false :> "a2"
+          m `hasBeenCalledWith` ("1" :> 10 :> true  :> "a1")
+          m `hasBeenCalledWith` ("2" :> 20 :> false :> "a2")
         ,
         verifyCount: \m c -> do
-          verifyCount m c $ "1" :> 10 :> true  :> "a1"
-          verifyCount m c $ "2" :> 20 :> false :> "a2"
+          m `hasBeenCalledTimes` c `with` ("1" :> 10 :> true  :> "a1")
+          m `hasBeenCalledTimes` c `with` ("2" :> 20 :> false :> "a2")
         ,
-        verifyFailed: \m -> verify m $ "1" :> 10 :> true :> "a3"
+        verifyFailed: \m -> m `hasBeenCalledWith` ("1" :> 10 :> true :> "a3")
       }
 
       mockTest {
@@ -309,14 +309,14 @@ pmockSpec = do
         ],
         executeFailed: Just \m -> [ fun m "2" 20 false "a2" 3.1 ],
         verifyMock: \m -> do 
-          verify m $ "1" :> 10 :> true  :> "a1" :> 2.0
-          verify m $ "2" :> 20 :> false :> "a2" :> 3.0
+          m `hasBeenCalledWith` ("1" :> 10 :> true  :> "a1" :> 2.0)
+          m `hasBeenCalledWith` ("2" :> 20 :> false :> "a2" :> 3.0)
         ,
         verifyCount: \m c -> do
-          verifyCount m c $ "1" :> 10 :> true  :> "a1" :> 2.0
-          verifyCount m c $ "2" :> 20 :> false :> "a2" :> 3.0
+          m `hasBeenCalledTimes` c `with` ("1" :> 10 :> true  :> "a1" :> 2.0)
+          m `hasBeenCalledTimes` c `with` ("2" :> 20 :> false :> "a2" :> 3.0)
         ,
-        verifyFailed: \m -> verify m $ "1" :> 10 :> true :> "a1" :> 1.0
+        verifyFailed: \m -> m `hasBeenCalledWith` ("1" :> 10 :> true :> "a1" :> 1.0)
       }
 
       mockTest {
@@ -335,14 +335,14 @@ pmockSpec = do
         ],
         executeFailed: Just \m -> [ fun m "2" 20 false "a2" 3.0 false ],
         verifyMock: \m -> do 
-          verify m $ "1" :> 10 :> true  :> "a1" :> 2.0 :> false
-          verify m $ "2" :> 20 :> false :> "a2" :> 3.0 :> true
+          m `hasBeenCalledWith` ("1" :> 10 :> true  :> "a1" :> 2.0 :> false)
+          m `hasBeenCalledWith` ("2" :> 20 :> false :> "a2" :> 3.0 :> true)
         ,
         verifyCount: \m c -> do
-          verifyCount m c $ "1" :> 10 :> true  :> "a1" :> 2.0 :> false
-          verifyCount m c $ "2" :> 20 :> false :> "a2" :> 3.0 :> true
+          m `hasBeenCalledTimes` c `with` ("1" :> 10 :> true  :> "a1" :> 2.0 :> false)
+          m `hasBeenCalledTimes` c `with` ("2" :> 20 :> false :> "a2" :> 3.0 :> true)
         ,
-        verifyFailed: \m -> verify m $ "1" :> 10 :> true :> "a1" :> 2.0 :> true
+        verifyFailed: \m -> m `hasBeenCalledWith` ("1" :> 10 :> true :> "a1" :> 2.0 :> true)
       }
 
       mockTest {
@@ -361,14 +361,14 @@ pmockSpec = do
         ],
         executeFailed: Just \m -> [ fun m "2" 20 false "a2" 3.0 true "b2" ],
         verifyMock: \m -> do 
-          verify m $ "1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2"
-          verify m $ "2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3"
+          m `hasBeenCalledWith` ("1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2")
+          m `hasBeenCalledWith` ("2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3")
         ,
         verifyCount: \m c -> do
-          verifyCount m c $ "1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2"
-          verifyCount m c $ "2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3"
+          m `hasBeenCalledTimes` c `with` ("1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2")
+          m `hasBeenCalledTimes` c `with` ("2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3")
         ,
-        verifyFailed: \m -> verify m $ "1" :> 10 :> true :> "a1" :> 2.0 :> false :> "b3"
+        verifyFailed: \m -> m `hasBeenCalledWith` ("1" :> 10 :> true :> "a1" :> 2.0 :> false :> "b3")
       }
 
       mockTest {
@@ -387,14 +387,14 @@ pmockSpec = do
         ],
         executeFailed: Just \m -> [ fun m "2" 20 false "a2" 3.0 true "b3" 200 ],
         verifyMock: \m -> do 
-          verify m $ "1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200
-          verify m $ "2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300
+          m `hasBeenCalledWith` ("1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200)
+          m `hasBeenCalledWith` ("2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300)
         ,
         verifyCount: \m c -> do
-          verifyCount m c $ "1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200
-          verifyCount m c $ "2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300
+          m `hasBeenCalledTimes` c `with` ("1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200)
+          m `hasBeenCalledTimes` c `with` ("2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300)
         ,
-        verifyFailed: \m -> verify m $ "1" :> 10 :> true :> "a1" :> 2.0 :> false :> "b2" :> 300
+        verifyFailed: \m -> m `hasBeenCalledWith` ("1" :> 10 :> true :> "a1" :> 2.0 :> false :> "b2" :> 300)
       }
 
       mockTest {
@@ -413,47 +413,47 @@ pmockSpec = do
         ],
         executeFailed: Just \m -> [ fun m "2" 20 false "a2" 3.0 true "b3" 300 true ],
         verifyMock: \m -> do 
-          verify m $ "1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200 :> true
-          verify m $ "2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300 :> false
+          m `hasBeenCalledWith` ("1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200 :> true)
+          m `hasBeenCalledWith` ("2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300 :> false)
         ,
         verifyCount: \m c -> do
-          verifyCount m c $ "1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200 :> true
-          verifyCount m c $ "2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300 :> false
+          m `hasBeenCalledTimes` c `with` ("1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200 :> true)
+          m `hasBeenCalledTimes` c `with` ("2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300 :> false)
         ,
-        verifyFailed: \m -> verify m $ "1" :> 10 :> true :> "a1" :> 2.0 :> false :> "b2" :> 200 :> false
+        verifyFailed: \m -> m `hasBeenCalledWith` ("1" :> 10 :> true :> "a1" :> 2.0 :> false :> "b2" :> 200 :> false)
       }
 
-    describe "Specify the number of Verify times in detail" do
+    describe "Specify the number of ti`hasBeenCalledWith` mes in detail" do
       it "GreaterThanEqual" do
         let 
           m = mock $ "a" :> 10
           _ = fun m "a"
           _ = fun m "a"
           _ = fun m "a"
-        verifyCount m (GreaterThanEqual 3) "a"
+        m `hasBeenCalledTimesGreaterThanEqual` 3 `with` "a"
       it "LessThanEqual" do
         let 
           m = mock $ "a" :> 10
           _ = fun m "a"
           _ = fun m "a"
           _ = fun m "a"
-        verifyCount m (LessThanEqual 3) "a"
+        m `hasBeenCalledTimesLessThanEqual` 3 `with` "a"
       it "GreaterThan" do
         let 
           m = mock $ "a" :> 10
           _ = fun m "a"
           _ = fun m "a"
           _ = fun m "a"
-        verifyCount m (GreaterThan 2) "a"
+        m `hasBeenCalledTimesGreaterThan` 2 `with` "a"
       it "LessThan" do
         let 
           m = mock $ "a" :> 10
           _ = fun m "a"
           _ = fun m "a"
           _ = fun m "a"
-        verifyCount m (LessThan 4) "a"
+        m `hasBeenCalledTimesLessThan` 4 `with` "a"
 
-    describe "Verify has not been called" do
+    describe "has not been called" do
       it "simple mock" do
         let
           m = mock $ "a" :> 10
@@ -465,7 +465,7 @@ pmockSpec = do
           m = mock $ "a" :> 10
         m `hasNotBeenCalledWith` any@String
 
-      it "verify failed" do
+      it "fa`hasBeenCalledWith` iled" do
         let
           m = mock $ "a" :> 10
           _ = fun m "a"
@@ -488,20 +488,20 @@ pmockSpec = do
         expected: [11, 11, 11], 
         execute: \m -> [fun m "1233", fun m "1234", fun m "2234"],
         executeFailed: Nothing,
-        verifyMock: \m -> verify m "1234",
-        verifyCount: \m c -> verifyCount m c "1234",
-        verifyFailed: \m -> verify m "foo"
+        verifyMock: \m -> m `hasBeenCalledWith` "1234",
+        verifyCount: \m c -> m `hasBeenCalledTimes` c $ "1234",
+        verifyFailed: \m -> m `hasBeenCalledWith` "foo"
       }
 
       mockTest {
-        name: "Verify with arbitrary arguments", 
+        name: "wi`hasBeenCalledWith` th arbitrary arguments", 
         create: \_ -> mock $ "1234" :> 11,
         expected: 11, 
         execute: \m -> fun m "1234",
         executeFailed: Just \m -> fun m "1233",
-        verifyMock: \m -> verify m (any @String),
-        verifyCount: \m c -> verifyCount m c (any @String),
-        verifyFailed: \m -> verify m "not called param"
+        verifyMock: \m -> m `hasBeenCalledWith` (any @String),
+        verifyCount: \m c -> m `hasBeenCalledTimes` c $ (any @String),
+        verifyFailed: \m -> m `hasBeenCalledWith` "not called param"
       }
 
       mockTest {
@@ -510,20 +510,20 @@ pmockSpec = do
         expected: "Expected", 
         execute: \m -> fun m 11,
         executeFailed: Just \m -> fun m 10,
-        verifyMock: \m -> verify m 11,
-        verifyCount: \m c -> verifyCount m c 11,
-        verifyFailed: \m -> verify m 10
+        verifyMock: \m -> m `hasBeenCalledWith` 11,
+        verifyCount: \m c -> m `hasBeenCalledTimes` c $ 11,
+        verifyFailed: \m -> m `hasBeenCalledWith` 10
       }
 
       mockTest {
-        name: "Verify arguments with your own Matcher", 
+        name: "ar`hasBeenCalledWith` guments with your own Matcher", 
         create: \_ -> mock $ 10 :> "Expected",
         expected: "Expected", 
         execute: \m -> fun m 10,
         executeFailed: Just \m -> fun m 1000,
-        verifyMock: \m -> verify m $ matcher (_ < 11) "< 11",
-        verifyCount: \m c -> verifyCount m c $ matcher (_ > 9) "> 9",
-        verifyFailed: \m -> verify m $ matcher (_ > 11) "> 11"
+        verifyMock: \m -> m `hasBeenCalledWith` matcher (_ < 11) "< 11",
+        verifyCount: \m c -> m `hasBeenCalledTimes` c $ matcher (_ > 9) "> 9",
+        verifyFailed: \m -> m `hasBeenCalledWith` matcher (_ > 11) "> 11"
       }
 
       mockTest {
@@ -532,9 +532,9 @@ pmockSpec = do
         expected: [111, 111, 111], 
         execute: \m -> [fun m "a", fun m "b", fun m "c"],
         executeFailed: Just \m -> [fun m "d"],
-        verifyMock: \m -> verify m "a",
-        verifyCount: \m c -> verifyCount m c "b",
-        verifyFailed: \m -> verify m "d"
+        verifyMock: \m -> m `hasBeenCalledWith` "a",
+        verifyCount: \m c -> m `hasBeenCalledTimes` c $ "b",
+        verifyFailed: \m -> m `hasBeenCalledWith` "d"
       }
 
       mockTest {
@@ -543,9 +543,9 @@ pmockSpec = do
         expected: [10, 10, 10], 
         execute: \m -> [fun m 5 true, fun m 6 true, fun m 7 true],
         executeFailed: Just \m -> [fun m 8 true],
-        verifyMock: \m -> verify m $ 5 :> true,
-        verifyCount: \m c -> verifyCount m c $ 6 :> true,
-        verifyFailed: \m -> verify m $ 8 :> true
+        verifyMock: \m -> m `hasBeenCalledWith` (5 :> true),
+        verifyCount: \m c -> m `hasBeenCalledTimes` c $ 6 :> true,
+        verifyFailed: \m -> m `hasBeenCalledWith` (8 :> true)
       }
 
       mockTest {
@@ -554,20 +554,20 @@ pmockSpec = do
         expected: 11,
         execute: \m -> fun m "x",
         executeFailed: Just \m -> fun m "X",
-        verifyMock: \m -> verify m "x",
-        verifyCount: \m c -> verifyCount m c "x",
-        verifyFailed: \m -> verify m "X"
+        verifyMock: \m -> m `hasBeenCalledWith` "x",
+        verifyCount: \m c -> m `hasBeenCalledTimes` c $ "x",
+        verifyFailed: \m -> m `hasBeenCalledWith` "X"
       }
 
       mockTest {
-        name: "Verify with Not Matcher.",
+        name: "wi`hasBeenCalledWith` th Not Matcher.",
         create: \_ -> mock $ "X" :> 11,
         expected: 11,
         execute: \m -> fun m "X",
         executeFailed: Nothing,
-        verifyMock: \m -> verify m $ not "x",
-        verifyCount: \m c -> verifyCount m c $ not "x",
-        verifyFailed: \m -> verify m "x"
+        verifyMock: \m -> m `hasBeenCalledWith` not "x",
+        verifyCount: \m c -> m `hasBeenCalledTimes` c $ not "x",
+        verifyFailed: \m -> m `hasBeenCalledWith` "x"
       }
 
       mockTest {
@@ -576,9 +576,9 @@ pmockSpec = do
         expected: 11,
         execute: \m -> fun m 10,
         executeFailed: Just \m -> fun m 11,
-        verifyMock: \m -> verify m 10,
-        verifyCount: \m c -> verifyCount m c 10,
-        verifyFailed: \m -> verify m 11
+        verifyMock: \m -> m `hasBeenCalledWith` 10,
+        verifyCount: \m c -> m `hasBeenCalledTimes` c $ 10,
+        verifyFailed: \m -> m `hasBeenCalledWith` 11
       }
 
       it "Arbitrary Arguments All Match Arg1" do
@@ -588,7 +588,7 @@ pmockSpec = do
           _ = fun m 30
           _ = fun m 40
 
-        verify m $ MatchAll $ matcher (_ >= 30) ">= 30"
+        m `hasBeenCalledWith` (MatchAll $ matcher (_ >= 30) ">= 30")
 
       it "Arbitrary Arguments All Match Arg2" do
         let
@@ -597,10 +597,10 @@ pmockSpec = do
           _ = fun m "Title" 2020
           _ = fun m "Title" 2001
 
-        verify m $ MatchAll $ "Title" :> matcher (_ > 2000) "> 2000"
+        m `hasBeenCalledWith` (MatchAll $ "Title" :> matcher (_ > 2000) "> 2000")
 
     describe "Order Verification" do
-      describe "Verify exactly sequential order." do
+      describe "ex`hasBeenCalledWith` actly sequential order." do
         mockOrderTest {
           name: "1 Arguments", 
           create: \_ -> mock $ any :> unit,
@@ -659,7 +659,7 @@ pmockSpec = do
           ]
         }
       
-      describe "Verify partially sequential order." do
+      describe "pa`hasBeenCalledWith` rtially sequential order." do
         mockOrderTest {
           name: "1 Arguments", 
           create: \_ -> mock $ any :> unit,
@@ -754,13 +754,13 @@ pmockSpec = do
 
         result `shouldEqual` {title: "Article Title"}
         
-        verify m "Article Id"
+        m `hasBeenCalledWith` "Article Id"
       
       it "Return Monad(update)." do
         let
           updateMock = mock $ "New Title" :> pure @(StateT State Aff) unit
         _ <- runStateT (fun updateMock "New Title") {article: {title: "Old Title"}} 
-        verify updateMock "New Title"
+        updateMock `hasBeenCalledWith` "New Title"
 
     mockTest {
       name: "ADT", 
@@ -768,9 +768,9 @@ pmockSpec = do
       expected: "data1", 
       execute: \m -> fun m (Data1 "data1"),
       executeFailed: Just \m -> fun m (Data1 "data2"),
-      verifyMock: \m -> verify m (Data1 "data1"),
-      verifyCount: \m c -> verifyCount m c (Data1 "data1"),
-      verifyFailed: \m -> verify m (Data2 "data1")
+      verifyMock: \m -> m `hasBeenCalledWith` (Data1 "data1"),
+      verifyCount: \m c -> m `hasBeenCalledTimes` c $ (Data1 "data1"),
+      verifyFailed: \m -> m `hasBeenCalledWith` (Data2 "data1")
     }
 
   describe "Appropriate message when a test fails." do
@@ -812,9 +812,9 @@ pmockSpec = do
               "  expected: \"X\"",
               "  but was : \"A\""
             ]
-          expectErrorWithMessage expected $ verify m "X"
+          expectErrorWithMessage expected $ m `hasBeenCalledWith` "X"
 
-        it "verify count" do
+        it "co`hasBeenCalledWith` unt" do
           let
             m = mock $ any@String :> 100
             _ = fun m "A"
@@ -919,9 +919,9 @@ pmockSpec = do
               "  expected: \"X\"",
               "  but was : \"A\""
             ]
-          expectErrorWithMessage expected $ verify m "X"
+          expectErrorWithMessage expected $ m `hasBeenCalledWith` "X"
 
-        it "verify count" do
+        it "co`hasBeenCalledWith` unt" do
           let
             m = namedMock "mock function" $ any@String :> 100
             _ = fun m "A"

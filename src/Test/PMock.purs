@@ -19,8 +19,14 @@ module Test.PMock
   , verifyCount
   , verifyPartiallySequence
   , verifySequence
-  , hasBeenCalledTimesWith
+  , hasBeenCalledWith
   , hasNotBeenCalledWith
+  , hasBeenCalledTimes
+  , hasBeenCalledTimesGreaterThanEqual
+  , hasBeenCalledTimesLessThanEqual
+  , hasBeenCalledTimesGreaterThan
+  , hasBeenCalledTimesLessThan
+  , with
   )
   where
 
@@ -320,6 +326,15 @@ else
 instance instanceVerify :: (Eq a, Show a) => Verify a a where
   verify v a = _verify v (MatchAny a)
 
+hasBeenCalledWith
+  :: forall @params @input fun m
+   . Verify params input
+  => MonadThrow Error m
+  => Mock fun params
+  -> input
+  -> m Unit
+hasBeenCalledWith = verify
+
 _verify :: forall fun params m. Eq params => Show params => MonadThrow Error m => Mock fun params -> VerifyMatchType params -> m Unit
 _verify (Mock name _ (Verifier calledParamsList)) matcher =
   case doVerify name calledParamsList matcher of
@@ -395,16 +410,63 @@ _verifyCount (Mock name _ (Verifier calledParamsList)) v method =
       "  expected: " <> show method,
       "  but was : " <> show callCount]
 
-hasBeenCalledTimesWith
+hasBeenCalledTimes
   :: forall @countType @params @a fun m
    . VerifyCount countType params a
   => MonadThrow Error m
   => Eq params
   => Mock fun params
   -> countType
-  -> a 
+  -> a
   -> m Unit
-hasBeenCalledTimesWith = verifyCount
+hasBeenCalledTimes = verifyCount
+
+hasBeenCalledTimesGreaterThanEqual
+  :: forall params a fun m
+   . VerifyCount CountVerifyMethod params a
+  => MonadThrow Error m
+  => Eq params
+  => Mock fun params
+  -> Int
+  -> a
+  -> m Unit
+hasBeenCalledTimesGreaterThanEqual m i = hasBeenCalledTimes m (GreaterThanEqual i)
+
+hasBeenCalledTimesLessThanEqual
+  :: forall params a fun m
+   . VerifyCount CountVerifyMethod params a
+  => MonadThrow Error m
+  => Eq params
+  => Mock fun params
+  -> Int
+  -> a
+  -> m Unit
+hasBeenCalledTimesLessThanEqual m i = hasBeenCalledTimes m (LessThanEqual i)
+
+hasBeenCalledTimesGreaterThan
+  :: forall params a fun m
+   . VerifyCount CountVerifyMethod params a
+  => MonadThrow Error m
+  => Eq params
+  => Mock fun params
+  -> Int
+  -> a
+  -> m Unit
+hasBeenCalledTimesGreaterThan m i = hasBeenCalledTimes m (GreaterThan i)
+
+hasBeenCalledTimesLessThan
+  :: forall params a fun m
+   . VerifyCount CountVerifyMethod params a
+  => MonadThrow Error m
+  => Eq params
+  => Mock fun params
+  -> Int
+  -> a
+  -> m Unit
+hasBeenCalledTimesLessThan m i = hasBeenCalledTimes m (LessThan i)
+
+with :: forall a m. MonadThrow Error m => (a -> m Unit) -> a -> m Unit
+with f a = f a 
 
 hasNotBeenCalledWith
   :: forall params a fun m
