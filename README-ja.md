@@ -45,7 +45,7 @@ main = do
 ```haskell
 import Prelude
 
-import Test.PMock (fun, mock, verify, (:>))
+import Test.PMock (fun, mock, verify, (:>), hasBeenCalledWith)
 import Test.Spec (Spec, it)
 import Test.Spec.Assertions (shouldEqual)
 
@@ -60,6 +60,9 @@ spec = do
 
     -- verify
     verify m $ "Title" :> 2023
+
+    -- 次のようにも書けます
+    m `hasBeenCalledWith` ("Title" :> 2023)
 ```
 verifyに失敗した場合、以下のようなメッセージが出力されます。
 <pre style="color: #D2706E">
@@ -98,7 +101,7 @@ Error: function `namedMock` was not called with expected arguments.
 ```haskell
 import Prelude
 
-import Test.PMock (mock, verifyCount, (:>))
+import Test.PMock (hasBeenCalledTimes, mock, verifyCount, with, (:>))
 import Test.Spec (Spec, it)
 
 spec :: Spec Unit
@@ -109,6 +112,10 @@ spec = do
 
     -- verify count
     verifyCount m 0 $ "Title" :> 2023
+
+    -- 次のようにも書けます
+    m `hasBeenCalledTimes` 0 $ "Title" :> 2023
+    m `hasBeenCalledTimes` 0 `with` ("Title" :> 2023)
 ```
 回数が一致しない場合、以下のようなメッセージが出力されます。
 <pre style="color: #D2706E">
@@ -154,6 +161,13 @@ function was not called the expected number of times.
 expected: >= 4
 but was : 3
 </pre>
+次のように書くこともできます。
+```haskell
+m `hasBeenCalledTimesGreaterThan` 0 `with` ("Title" :> 2023)
+m `hasBeenCalledTimesGreaterThanEqual` 0 `with` ("Title" :> 2023)
+m `hasBeenCalledTimesLessThan` 10 `with` ("Title" :> 2023)
+m `hasBeenCalledTimesLessThanEqual` 10 `with` ("Title" :> 2023)
+```
 
 ## 呼び出された順序を検証する
 ### 厳密に呼び出し順を検証する
@@ -163,7 +177,7 @@ but was : 3
 ```haskell
 import Prelude
 
-import Test.PMock (any, fun, mock, verifySequence, (:>))
+import Test.PMock (any, fun, mock, verifySequence, (:>), hasBeenCalledInOrder)
 import Test.Spec (Spec, describe, it)
 
 spec :: Spec Unit
@@ -179,6 +193,13 @@ spec = do
 
       -- verify OK
       verifySequence m [
+        "a",
+        "b",
+        "c"
+      ]
+
+      -- こうも書けます
+      m `hasBeenCalledInOrder` [
         "a",
         "b",
         "c"
@@ -211,7 +232,7 @@ but was  3rd call: "c"
 ```haskell
 import Prelude
 
-import Test.PMock (any, fun, mock, verifyPartiallySequence, (:>))
+import Test.PMock (any, fun, mock, verifyPartiallySequence, (:>), hasBeenCalledInPartialOrder)
 import Test.Spec (Spec, describe, it)
 
 spec :: Spec Unit
@@ -225,6 +246,12 @@ spec = do
         _ = fun m "c"
 
       verifyPartiallySequence m [
+        "a",
+        "c"
+      ]
+
+      -- こうも書けます
+      m `hasBeenCalledInPartialOrder` [
         "a",
         "c"
       ]
@@ -344,7 +371,7 @@ mock関数に対して複数回の呼び出しが予想される場合、`MatchA
 もし、`mock $ "Name" :> 100` のようにMatcherを使用しない場合は、完全に一致する入力以外は検証しないでしょうから、`MatchAll` を使用する必要はないでしょう。
 
 ### その他の組み込みMatcher
-`any`以外の`Matcher`としては、`or`, `and`, `not`が用意されています。
+`any`以外の`Matcher`としては、`or`, `and`, `notEqual`が用意されています。
 
 `or`を使用すると、次の例のように複数の値のいずれも許容することができるようになります。
 ```haskell
@@ -392,13 +419,13 @@ spec = do
       verify m 1
       verify m 2
 ```
-`not`を使用すると次のように条件を反転させることができます。
+`notEqual`を使用すると次のように条件を反転させることができます。
 
 値を指定した場合は、その値"以外"を受け付けるようになります。
 ```haskell
 import Prelude
 
-import Test.PMock (fun, mock, not, (:>))
+import Test.PMock (fun, mock, notEqual, (:>))
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
@@ -407,14 +434,14 @@ spec = do
   describe "Example Spec" do
     it "Not Matcher test" do
       let
-        m = mock $ not 5 :> "OK"
+        m = mock $ notEqual 5 :> "OK"
 
       fun m 4 `shouldEqual` "OK"
       fun m 6 `shouldEqual` "OK"
 ```
 次のように他の`Matcher`と組み合わせることもできます。
 ```haskell
-import Test.PMock (fun, mock, not, or, (:>))
+import Test.PMock (fun, mock, notEqual, or, (:>))
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
@@ -423,7 +450,7 @@ spec = do
   describe "Example Spec" do
     it "Not Matcher test" do
       let
-        m = mock $ not (4 `or` 5) :> "OK"
+        m = mock $ notEqual (4 `or` 5) :> "OK"
 
       fun m 3 `shouldEqual` "OK"
       fun m 6 `shouldEqual` "OK"

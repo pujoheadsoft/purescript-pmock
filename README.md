@@ -46,7 +46,7 @@ In this case, the mock function can be taken out of the Mock type by using `fun`
 ```haskell
 import Prelude
 
-import Test.PMock (fun, mock, verify, (:>))
+import Test.PMock (fun, mock, verify, (:>), hasBeenCalledWith )
 import Test.Spec (Spec, it)
 import Test.Spec.Assertions (shouldEqual)
 
@@ -61,6 +61,9 @@ spec = do
 
     -- verify
     verify m $ "Title" :> 2023
+
+    -- Another way to write this is
+    m `hasBeenCalledWith` ("Title" :> 2023)
 ```
 If the verify does not match, the following message is output.
 <pre style="color: #D2706E">
@@ -99,7 +102,7 @@ This allows you to verify that a function has not been called.
 ```haskell
 import Prelude
 
-import Test.PMock (mock, verifyCount, (:>))
+import Test.PMock (mock, verifyCount, (:>), hasBeenCalledTimes)
 import Test.Spec (Spec, it)
 
 spec :: Spec Unit
@@ -110,6 +113,10 @@ spec = do
 
     -- verify count
     verifyCount m 0 $ "Title" :> 2023
+
+    -- Another way to write this is
+    m `hasBeenCalledTimes` 0 $ "Title" :> 2023
+    m `hasBeenCalledTimes` 0 `with` ("Title" :> 2023)
 ```
 If the verify count does not match, the following message is output.
 <pre style="color: #D2706E">
@@ -155,6 +162,13 @@ Function was not called the expected number of times.
 expected: >= 4
 but was : 3
 </pre>
+Another way to write this is.
+```haskell
+m `hasBeenCalledTimesGreaterThan` 0 `with` ("Title" :> 2023)
+m `hasBeenCalledTimesGreaterThanEqual` 0 `with` ("Title" :> 2023)
+m `hasBeenCalledTimesLessThan` 10 `with` ("Title" :> 2023)
+m `hasBeenCalledTimesLessThanEqual` 10 `with` ("Title" :> 2023)
+```
 
 ## Verifying function call sequential order
 ### Strict call order valification
@@ -164,7 +178,7 @@ For all calls to the function, it is verified that the order and values are exac
 ```haskell
 import Prelude
 
-import Test.PMock (any, fun, mock, verifySequence, (:>))
+import Test.PMock (any, fun, mock, verifySequence, (:>), hasBeenCalledInOrder)
 import Test.Spec (Spec, describe, it)
 
 spec :: Spec Unit
@@ -180,6 +194,13 @@ spec = do
 
       -- verify OK
       verifySequence m [
+        "a",
+        "b",
+        "c"
+      ]
+
+      -- Another way to write this is
+      m `hasBeenCalledInOrder` [
         "a",
         "b",
         "c"
@@ -212,7 +233,7 @@ Unlike `verifySequence`, it is not necessary that all calls match exactly. As lo
 ```haskell
 import Prelude
 
-import Test.PMock (any, fun, mock, verifyPartiallySequence, (:>))
+import Test.PMock (any, fun, mock, verifyPartiallySequence, (:>), hasBeenCalledInPartialOrder)
 import Test.Spec (Spec, describe, it)
 
 spec :: Spec Unit
@@ -226,6 +247,12 @@ spec = do
         _ = fun m "c"
 
       verifyPartiallySequence m [
+        "a",
+        "c"
+      ]
+
+      -- Another way to write this is
+      m `hasBeenCalledInPartialOrder` [
         "a",
         "c"
       ]
@@ -388,13 +415,13 @@ spec = do
       verify m 1
       verify m 2
 ```
-You can use `not` to invert the condition as follows.
+You can use `notEqual` to invert the condition as follows.
 
 If a value is specified, it will be accepted other that value.
 ```haskell
 import Prelude
 
-import Test.PMock (fun, mock, not, (:>))
+import Test.PMock (fun, mock, notEqual, (:>))
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
@@ -403,14 +430,14 @@ spec = do
   describe "Example Spec" do
     it "Not Matcher test" do
       let
-        m = mock $ not 5 :> "OK"
+        m = mock $ notEqual 5 :> "OK"
 
       fun m 4 `shouldEqual` "OK"
       fun m 6 `shouldEqual` "OK"
 ```
 It can be combined with other `Matchers`.
 ```haskell
-import Test.PMock (fun, mock, not, or, (:>))
+import Test.PMock (fun, mock, notEqual, or, (:>))
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
@@ -419,7 +446,7 @@ spec = do
   describe "Example Spec" do
     it "Not Matcher test" do
       let
-        m = mock $ not (4 `or` 5) :> "OK"
+        m = mock $ notEqual (4 `or` 5) :> "OK"
 
       fun m 3 `shouldEqual` "OK"
       fun m 6 `shouldEqual` "OK"
