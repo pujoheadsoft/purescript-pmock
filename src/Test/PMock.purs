@@ -19,6 +19,7 @@ module Test.PMock
   , verifyCount
   , verifyPartiallySequence
   , verifySequence
+  , hasNotBeenCalledWith
   )
   where
 
@@ -392,6 +393,16 @@ _verifyCount (Mock name _ (Verifier calledParamsList)) v method =
       "function" <> mockNameLabel name <> "was not called the expected number of times.",
       "  expected: " <> show method,
       "  but was : " <> show callCount]
+
+hasNotBeenCalledWith
+  :: forall params a fun m
+   . VerifyCount Int params a
+  => MonadThrow Error m
+  => Eq params
+  => Mock fun params
+  -> a
+  -> m Unit
+hasNotBeenCalledWith v a = verifyCount v 0 a
 
 showCalledParams :: forall fun params. Show params => Mock fun params -> String
 showCalledParams (Mock _ _ (Verifier calledParamsList)) = show calledParamsList

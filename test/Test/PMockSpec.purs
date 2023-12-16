@@ -10,7 +10,7 @@ import Data.Maybe (Maybe(..))
 import Data.Show.Generic (genericShow)
 import Data.String (joinWith)
 import Effect.Aff (Aff, Error)
-import Test.PMock (CountVerifyMethod(..), VerifyMatchType(..), and, any, fun, matcher, mock, mockFun, namedMock, not, or, verify, verifyCount, verifyPartiallySequence, verifySequence, (:>))
+import Test.PMock (CountVerifyMethod(..), VerifyMatchType(..), and, any, fun, matcher, mock, mockFun, namedMock, not, or, verify, verifyCount, hasNotBeenCalledWith, verifyPartiallySequence, verifySequence, (:>))
 import Test.PMockSpecs (expectErrorWithMessage, mockIt, runRuntimeThrowableFunction)
 import Test.Spec (Spec, SpecT, describe, it)
 import Test.Spec.Assertions (expectError, shouldEqual)
@@ -452,7 +452,35 @@ pmockSpec = do
           _ = fun m "a"
           _ = fun m "a"
         verifyCount m (LessThan 4) "a"
-    
+
+    describe "Verify has not been called" do
+      it "simple mock" do
+        let
+          m = mock $ "a" :> 10
+          _ = fun m "a"
+        m `hasNotBeenCalledWith` "b"
+
+      it "any matcher" do
+        let
+          m = mock $ "a" :> 10
+        m `hasNotBeenCalledWith` any@String
+
+      it "verify failed" do
+        let
+          m = mock $ "a" :> 10
+          _ = fun m "a"
+        expectError $ hasNotBeenCalledWith m "a"
+
+      it "multiple mock" do
+        let
+          m = mock [
+            "a" :> 10,
+            "b" :> 20
+          ]
+          _ = fun m "a"
+          _ = fun m "b"
+        m `hasNotBeenCalledWith` "c"
+
     describe "Matcher" do
       mockTest {
         name: "Handling Arbitrary Arguments.", 
