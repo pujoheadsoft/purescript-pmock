@@ -10,7 +10,7 @@ import Data.Maybe (Maybe(..))
 import Data.Show.Generic (genericShow)
 import Data.String (joinWith)
 import Effect.Aff (Aff, Error)
-import Test.PMock (VerifyMatchType(..), and, any, fun, hasBeenCalledInOrder, hasBeenCalledInPartialOrder, hasBeenCalledTimes, hasBeenCalledTimesGreaterThan, hasBeenCalledTimesGreaterThanEqual, hasBeenCalledTimesLessThan, hasBeenCalledTimesLessThanEqual, hasBeenCalledWith, hasNotBeenCalledWith, matcher, mock, mockFun, namedMock, not, or, with, (:>))
+import Test.PMock (VerifyMatchType(..), and, any, fun, hasBeenCalledInOrder, hasBeenCalledInPartialOrder, hasBeenCalledTimes, hasBeenCalledTimesGreaterThan, hasBeenCalledTimesGreaterThanEqual, hasBeenCalledTimesLessThan, hasBeenCalledTimesLessThanEqual, hasBeenCalledWith, hasNotBeenCalledWith, matcher, mock, mockFun, namedMock, notEqual, or, with, (:>))
 import Test.PMockSpecs (expectErrorWithMessage, mockIt, runRuntimeThrowableFunction)
 import Test.Spec (Spec, SpecT, describe, it)
 import Test.Spec.Assertions (expectError, shouldEqual)
@@ -550,7 +550,7 @@ pmockSpec = do
 
       mockTest {
         name: "Include Not Matcher as an argument.",
-        create: \_ -> mock $ not "X" :> 11,
+        create: \_ -> mock $ notEqual "X" :> 11,
         expected: 11,
         execute: \m -> fun m "x",
         executeFailed: Just \m -> fun m "X",
@@ -565,14 +565,14 @@ pmockSpec = do
         expected: 11,
         execute: \m -> fun m "X",
         executeFailed: Nothing,
-        verifyMock: \m -> m `hasBeenCalledWith` not "x",
-        verifyCount: \m c -> m `hasBeenCalledTimes` c $ not "x",
+        verifyMock: \m -> m `hasBeenCalledWith` notEqual "x",
+        verifyCount: \m c -> m `hasBeenCalledTimes` c $ notEqual "x",
         verifyFailed: \m -> m `hasBeenCalledWith` "x"
       }
 
       mockTest {
         name: "Include Not Matcher (function) as an argument.",
-        create: \_ -> mock $ (not $ matcher (_ > 10) "> 10") :> 11,
+        create: \_ -> mock $ (notEqual $ matcher (_ > 10) "> 10") :> 11,
         expected: 11,
         execute: \m -> fun m 10,
         executeFailed: Just \m -> fun m 11,

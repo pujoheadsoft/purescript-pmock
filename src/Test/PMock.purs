@@ -48,7 +48,7 @@ import Effect.Exception (Error, throw)
 import Effect.Unsafe (unsafePerformEffect)
 import Partial.Unsafe (unsafeCrashWith)
 import Test.PMock.Cons (Cons(..), (#>), type (#>))
-import Test.PMock.Param (Param(..), cons, (:>), value, param, any, matcher, or, and, not)
+import Test.PMock.Param (Param(..), cons, (:>), value, param, any, matcher, or, and, notEqual)
 import Test.PMock.ParamDivider (class ParamDivider, args, returnValue)
 import Test.Spec.Assertions (fail)
 
