@@ -10,7 +10,7 @@ import Data.Maybe (Maybe(..))
 import Data.Show.Generic (genericShow)
 import Data.String (joinWith)
 import Effect.Aff (Aff, Error)
-import Test.PMock (CountVerifyMethod(..), VerifyMatchType(..), and, any, fun, hasBeenCalledTimes, hasBeenCalledTimesGreaterThan, hasBeenCalledTimesGreaterThanEqual, hasBeenCalledTimesLessThan, hasBeenCalledTimesLessThanEqual, hasBeenCalledWith, hasNotBeenCalledWith, matcher, mock, mockFun, namedMock, not, or, verifyCount, verifyPartiallySequence, verifySequence, with, (:>))
+import Test.PMock (VerifyMatchType(..), and, any, fun, hasBeenCalledInOrder, hasBeenCalledInPartialOrder, hasBeenCalledTimes, hasBeenCalledTimesGreaterThan, hasBeenCalledTimesGreaterThanEqual, hasBeenCalledTimesLessThan, hasBeenCalledTimesLessThanEqual, hasBeenCalledWith, hasNotBeenCalledWith, matcher, mock, mockFun, namedMock, not, or, with, (:>))
 import Test.PMockSpecs (expectErrorWithMessage, mockIt, runRuntimeThrowableFunction)
 import Test.Spec (Spec, SpecT, describe, it)
 import Test.Spec.Assertions (expectError, shouldEqual)
@@ -47,23 +47,23 @@ mockTest f = describe f.name do
         in expectError $ runRuntimeThrowableFunction (\_ -> func m)
       Nothing -> pure unit
 
-  it "th`hasBeenCalledWith` at the call was made with the set arguments." do
+  it "that the call was made with the set arguments." do
     let 
       m = f.create unit
       _ = f.execute m
     f.verifyMock m
 
-  it "fa`hasBeenCalledWith` ils if the call is made with arguments different from those set." do
+  it "fails if the call is made with arguments different from those set." do
     let 
       m = f.create unit
       _ = f.execute m
     expectError $ f.verifyFailed m
 
-  it "th`hasBeenCalledWith` e number of times it has been called with the set arguments (0 times)." do
+  it "the number of times it has been called with the set arguments (0 times)." do
     let m = f.create unit
     f.verifyCount m 0
 
-  it "th`hasBeenCalledWith` e number of times it has been called with the set arguments (3 times)." do
+  it "the number of times it has been called with the set arguments (3 times)." do
     let 
       m = f.create unit
       _ = f.execute m
@@ -73,13 +73,13 @@ mockTest f = describe f.name do
 
 mockOrderTest :: forall mock m g r. Monad m => Eq r => Show r => MonadError Error g => VerifyOrderFixture mock r g -> SpecT g Unit m Unit
 mockOrderTest f = describe f.name do
-  it "ca`hasBeenCalledWith` ll was made with set order." do
+  it "call was made with set order." do
     let 
       m = f.create unit
       _ = f.execute m
     f.verifyMock m
 
-  it "fa`hasBeenCalledWith` ils if call with order different set order." do
+  it "fails if call with order different set order." do
     let 
       m = f.create unit
       _ = f.execute m
@@ -423,7 +423,7 @@ pmockSpec = do
         verifyFailed: \m -> m `hasBeenCalledWith` ("1" :> 10 :> true :> "a1" :> 2.0 :> false :> "b2" :> 200 :> false)
       }
 
-    describe "Specify the number of ti`hasBeenCalledWith` mes in detail" do
+    describe "Specify the number of times in detail" do
       it "GreaterThanEqual" do
         let 
           m = mock $ "a" :> 10
@@ -465,7 +465,7 @@ pmockSpec = do
           m = mock $ "a" :> 10
         m `hasNotBeenCalledWith` any@String
 
-      it "fa`hasBeenCalledWith` iled" do
+      it "failed" do
         let
           m = mock $ "a" :> 10
           _ = fun m "a"
@@ -494,7 +494,7 @@ pmockSpec = do
       }
 
       mockTest {
-        name: "wi`hasBeenCalledWith` th arbitrary arguments", 
+        name: "with arbitrary arguments", 
         create: \_ -> mock $ "1234" :> 11,
         expected: 11, 
         execute: \m -> fun m "1234",
@@ -516,7 +516,7 @@ pmockSpec = do
       }
 
       mockTest {
-        name: "ar`hasBeenCalledWith` guments with your own Matcher", 
+        name: "arguments with your own Matcher", 
         create: \_ -> mock $ 10 :> "Expected",
         expected: "Expected", 
         execute: \m -> fun m 10,
@@ -560,7 +560,7 @@ pmockSpec = do
       }
 
       mockTest {
-        name: "wi`hasBeenCalledWith` th Not Matcher.",
+        name: "with Not Matcher.",
         create: \_ -> mock $ "X" :> 11,
         expected: 11,
         execute: \m -> fun m "X",
@@ -600,7 +600,7 @@ pmockSpec = do
         m `hasBeenCalledWith` (MatchAll $ "Title" :> matcher (_ > 2000) "> 2000")
 
     describe "Order Verification" do
-      describe "ex`hasBeenCalledWith` actly sequential order." do
+      describe "exactly sequential order." do
         mockOrderTest {
           name: "1 Arguments", 
           create: \_ -> mock $ any :> unit,
@@ -610,12 +610,12 @@ pmockSpec = do
               _ = fun m "b"
               _ = fun m "c"
             unit,
-          verifyMock: \m -> verifySequence m [
+          verifyMock: \m -> m `hasBeenCalledInOrder` [
             "a",
             "b",
             "c"
           ],
-          verifyFailed: \m -> verifySequence m [
+          verifyFailed: \m -> m `hasBeenCalledInOrder` [
             "a",
             "b",
             "b"
@@ -631,12 +631,12 @@ pmockSpec = do
               _ = fun m "b" 2
               _ = fun m "c" 3
             unit,
-          verifyMock: \m -> verifySequence m [
+          verifyMock: \m -> m `hasBeenCalledInOrder` [
             "a" :> 1,
             "b" :> 2,
             "c" :> 3
           ],
-          verifyFailed: \m -> verifySequence m [
+          verifyFailed: \m -> m `hasBeenCalledInOrder` [
             "a" :> 2,
             "b" :> 2,
             "c" :> 3
@@ -650,16 +650,16 @@ pmockSpec = do
             let
               _ = fun m "a"
             unit,
-          verifyMock: \m -> verifySequence m [
+          verifyMock: \m -> m `hasBeenCalledInOrder` [
             "a"
           ],
-          verifyFailed: \m -> verifySequence m [
+          verifyFailed: \m -> m `hasBeenCalledInOrder` [
             "a",
             "b"
           ]
         }
       
-      describe "pa`hasBeenCalledWith` rtially sequential order." do
+      describe "partially sequential order." do
         mockOrderTest {
           name: "1 Arguments", 
           create: \_ -> mock $ any :> unit,
@@ -669,11 +669,11 @@ pmockSpec = do
               _ = fun m "b"
               _ = fun m "c"
             unit,
-          verifyMock: \m -> verifyPartiallySequence m [
+          verifyMock: \m -> m `hasBeenCalledInPartialOrder` [
             "a",
             "c"
           ],
-          verifyFailed: \m -> verifyPartiallySequence m [
+          verifyFailed: \m -> m `hasBeenCalledInPartialOrder` [
             "b",
             "a"
           ]
@@ -688,11 +688,11 @@ pmockSpec = do
               _ = fun m "b" false
               _ = fun m "c" true
             unit,
-          verifyMock: \m -> verifyPartiallySequence m [
+          verifyMock: \m -> m `hasBeenCalledInPartialOrder` [
             "a" :> true,
             "c" :> true
           ],
-          verifyFailed: \m -> verifyPartiallySequence m [
+          verifyFailed: \m -> m `hasBeenCalledInPartialOrder` [
             "b" :> false,
             "a" :> true
           ]
@@ -707,11 +707,11 @@ pmockSpec = do
               _ = fun m "b"
               _ = fun m "c"
             unit,
-          verifyMock: \m -> verifyPartiallySequence m [
+          verifyMock: \m -> m `hasBeenCalledInPartialOrder` [
             "b",
             "c"
           ],
-          verifyFailed: \m -> verifyPartiallySequence m [
+          verifyFailed: \m -> m `hasBeenCalledInPartialOrder` [
             "a",
             "d"
           ]
@@ -724,10 +724,10 @@ pmockSpec = do
             let
               _ = fun m "a"
             unit,
-          verifyMock: \m -> verifyPartiallySequence m [
+          verifyMock: \m -> m `hasBeenCalledInPartialOrder` [
             "a"
           ],
-          verifyFailed: \m -> verifyPartiallySequence m [
+          verifyFailed: \m -> m `hasBeenCalledInPartialOrder` [
             "a",
             "b"
           ]
@@ -814,7 +814,7 @@ pmockSpec = do
             ]
           expectErrorWithMessage expected $ m `hasBeenCalledWith` "X"
 
-        it "co`hasBeenCalledWith` unt" do
+        it "count" do
           let
             m = mock $ any@String :> 100
             _ = fun m "A"
@@ -823,7 +823,7 @@ pmockSpec = do
               "  expected: 2",
               "  but was : 1"
             ]
-          expectErrorWithMessage expected $ verifyCount m 2 "A"
+          expectErrorWithMessage expected $ m `hasBeenCalledTimes` 2 `with` "A"
 
         it "verifySequence" do
           let
@@ -840,7 +840,7 @@ pmockSpec = do
               "  expected 3rd call: \"C\"",
               "  but was  3rd call: \"A\""
             ]
-          expectErrorWithMessage expected $ verifySequence m ["A", "B", "C"]
+          expectErrorWithMessage expected $ m `hasBeenCalledInOrder` ["A", "B", "C"]
         
         it "verifySequence (count mismatch)" do
           let
@@ -852,7 +852,7 @@ pmockSpec = do
               "  number of function calls: 2",
               "  number of params:         3"
             ]
-          expectErrorWithMessage expected $ verifySequence m ["A", "B", "C"]
+          expectErrorWithMessage expected $ m `hasBeenCalledInOrder` ["A", "B", "C"]
         
         it "verifyPartiallySequence" do
           let
@@ -868,7 +868,7 @@ pmockSpec = do
               "    \"B\"",
               "    \"A\""
             ]
-          expectErrorWithMessage expected $ verifyPartiallySequence m ["A", "C"]
+          expectErrorWithMessage expected $ m `hasBeenCalledInPartialOrder` ["A", "C"]
 
         it "verifyPartiallySequence (count mismatch)" do
           let
@@ -879,7 +879,7 @@ pmockSpec = do
               "  number of function calls: 1",
               "  number of params:         2"
             ]
-          expectErrorWithMessage expected $ verifyPartiallySequence m ["A", "C"]
+          expectErrorWithMessage expected $ m `hasBeenCalledInPartialOrder` ["A", "C"]
 
     describe "named mock" do
       describe "call" do
@@ -921,7 +921,7 @@ pmockSpec = do
             ]
           expectErrorWithMessage expected $ m `hasBeenCalledWith` "X"
 
-        it "co`hasBeenCalledWith` unt" do
+        it "count" do
           let
             m = namedMock "mock function" $ any@String :> 100
             _ = fun m "A"
@@ -930,7 +930,7 @@ pmockSpec = do
               "  expected: 2",
               "  but was : 1"
             ]
-          expectErrorWithMessage expected $ verifyCount m 2 "A"
+          expectErrorWithMessage expected $ m `hasBeenCalledTimes` 2 `with` "A"
 
         it "verifySequence" do
           let
@@ -947,7 +947,7 @@ pmockSpec = do
               "  expected 3rd call: \"C\"",
               "  but was  3rd call: \"A\""
             ]
-          expectErrorWithMessage expected $ verifySequence m ["A", "B", "C"]
+          expectErrorWithMessage expected $ m `hasBeenCalledInOrder` ["A", "B", "C"]
         
         it "verifySequence (count mismatch)" do
           let
@@ -959,7 +959,7 @@ pmockSpec = do
               "  number of function calls: 2",
               "  number of params:         3"
             ]
-          expectErrorWithMessage expected $ verifySequence m ["A", "B", "C"]
+          expectErrorWithMessage expected $ m `hasBeenCalledInOrder` ["A", "B", "C"]
         
         it "verifyPartiallySequence" do
           let
@@ -975,7 +975,7 @@ pmockSpec = do
               "    \"B\"",
               "    \"A\""
             ]
-          expectErrorWithMessage expected $ verifyPartiallySequence m ["A", "C"]
+          expectErrorWithMessage expected $ m `hasBeenCalledInPartialOrder` ["A", "C"]
 
         it "verifyPartiallySequence (count mismatch)" do
           let
@@ -986,7 +986,7 @@ pmockSpec = do
               "  number of function calls: 1",
               "  number of params:         2"
             ]
-          expectErrorWithMessage expected $ verifyPartiallySequence m ["A", "C"]
+          expectErrorWithMessage expected $ m `hasBeenCalledInPartialOrder` ["A", "C"]
 
   describe "Cons" do
     describe "Show" do

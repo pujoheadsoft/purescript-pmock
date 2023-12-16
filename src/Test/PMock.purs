@@ -27,6 +27,8 @@ module Test.PMock
   , hasBeenCalledTimesGreaterThan
   , hasBeenCalledTimesLessThan
   , with
+  , hasBeenCalledInOrder
+  , hasBeenCalledInPartialOrder
   )
   where
 
@@ -535,6 +537,24 @@ instance instanceVerifyOrder :: (Eq a, Show a) => VerifyOrder a a where
   verifySequence v a = _verifyOrder ExactlySequence v a
   verifyPartiallySequence v a = _verifyOrder PartiallySequence v a
 
+hasBeenCalledInOrder
+  :: forall @params @input fun m
+   . VerifyOrder params input
+  => MonadThrow Error m
+  => Mock fun params
+  -> Array input
+  -> m Unit
+hasBeenCalledInOrder = verifySequence
+
+hasBeenCalledInPartialOrder
+  :: forall @params @input fun m
+   . VerifyOrder params input
+  => MonadThrow Error m
+  => Mock fun params
+  -> Array input
+  -> m Unit
+hasBeenCalledInPartialOrder = verifyPartiallySequence
+
 _verifyOrder
   :: forall fun params m
    . Eq params
@@ -631,4 +651,4 @@ verifyOrderFailedMesssage {index, calledValue, expectedValue} =
   showHumanReadable 1 = "1st"
   showHumanReadable 2 = "2nd"
   showHumanReadable 3 = "3rd"
-  showHumanReadable x = show x <> "th"
+  showHumanReadable n = show n <> "th"
