@@ -102,7 +102,7 @@ This allows you to verify that a function has not been called.
 ```haskell
 import Prelude
 
-import Test.PMock (mock, verifyCount, (:>), hasBeenCalledTimes)
+import Test.PMock (mock, verifyCount, (:>), hasBeenCalledTimes, with)
 import Test.Spec (Spec, it)
 
 spec :: Spec Unit
