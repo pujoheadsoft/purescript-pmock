@@ -17,7 +17,7 @@ import Test.Spec.Assertions (expectError, shouldEqual)
 
 type Fixture mock r m = {
   name :: String,
-  create :: Unit -> mock,
+  create :: Unit -> m mock,
   execute :: mock -> r,
   executeFailed :: Maybe (mock -> r),
   expected :: r,
@@ -28,7 +28,7 @@ type Fixture mock r m = {
 
 type VerifyOrderFixture mock r m = {
   name :: String,
-  create :: Unit -> mock,
+  create :: Unit -> m mock,
   execute :: mock -> r,
   verifyMock :: mock -> m Unit,
   verifyFailed :: mock -> m Unit
@@ -38,34 +38,33 @@ type VerifyOrderFixture mock r m = {
 mockTest :: forall mock m g r. Monad m => Eq r => Show r => MonadError Error g => Fixture mock r g -> SpecT g Unit m Unit
 mockTest f = describe f.name do
   it "Returns a set value when called with a set argument." do
-    let m = f.create unit
+    m <- f.create unit
     f.execute m `shouldEqual` f.expected
 
   it "Failure to call with set arguments." do
     case f.executeFailed of
-      Just func -> let m = f.create unit
-        in expectError $ runRuntimeThrowableFunction (\_ -> func m)
+      Just func -> do
+        m <- f.create unit
+        expectError $ runRuntimeThrowableFunction (\_ -> func m)
       Nothing -> pure unit
 
   it "that the call was made with the set arguments." do
-    let 
-      m = f.create unit
-      _ = f.execute m
+    m <- f.create unit
+    let _ = f.execute m
     f.verifyMock m
 
   it "fails if the call is made with arguments different from those set." do
-    let 
-      m = f.create unit
-      _ = f.execute m
+    m <- f.create unit
+    let _ = f.execute m
     expectError $ f.verifyFailed m
 
   it "the number of times it has been called with the set arguments (0 times)." do
-    let m = f.create unit
+    m <- f.create unit
     f.verifyCount m 0
 
   it "the number of times it has been called with the set arguments (3 times)." do
-    let 
-      m = f.create unit
+    m <- f.create unit
+    let
       _ = f.execute m
       _ = f.execute m
       _ = f.execute m
@@ -74,14 +73,14 @@ mockTest f = describe f.name do
 mockOrderTest :: forall mock m g r. Monad m => Eq r => Show r => MonadError Error g => VerifyOrderFixture mock r g -> SpecT g Unit m Unit
 mockOrderTest f = describe f.name do
   it "call was made with set order." do
+    m <- f.create unit
     let 
-      m = f.create unit
       _ = f.execute m
     f.verifyMock m
 
   it "fails if call with order different set order." do
+    m <- f.create unit
     let 
-      m = f.create unit
       _ = f.execute m
     expectError $ f.verifyFailed m
 
@@ -425,29 +424,29 @@ pmockSpec = do
 
     describe "Specify the number of times in detail" do
       it "GreaterThanEqual" do
+        m <- mock $ "a" :> 10
         let 
-          m = mock $ "a" :> 10
           _ = fun m "a"
           _ = fun m "a"
           _ = fun m "a"
         m `hasBeenCalledTimesGreaterThanEqual` 3 `with` "a"
       it "LessThanEqual" do
+        m <- mock $ "a" :> 10
         let 
-          m = mock $ "a" :> 10
           _ = fun m "a"
           _ = fun m "a"
           _ = fun m "a"
         m `hasBeenCalledTimesLessThanEqual` 3 `with` "a"
       it "GreaterThan" do
-        let 
-          m = mock $ "a" :> 10
+        m <- mock $ "a" :> 10
+        let   
           _ = fun m "a"
           _ = fun m "a"
           _ = fun m "a"
         m `hasBeenCalledTimesGreaterThan` 2 `with` "a"
       it "LessThan" do
+        m <- mock $ "a" :> 10
         let 
-          m = mock $ "a" :> 10
           _ = fun m "a"
           _ = fun m "a"
           _ = fun m "a"
@@ -455,28 +454,27 @@ pmockSpec = do
 
     describe "has not been called" do
       it "simple mock" do
+        m <- mock $ "a" :> 10
         let
-          m = mock $ "a" :> 10
           _ = fun m "a"
         m `hasNotBeenCalledWith` "b"
 
       it "any matcher" do
-        let
-          m = mock $ "a" :> 10
+        m <- mock $ "a" :> 10
         m `hasNotBeenCalledWith` any@String
 
       it "failed" do
+        m <- mock $ "a" :> 10
         let
-          m = mock $ "a" :> 10
           _ = fun m "a"
         expectError $ hasNotBeenCalledWith m "a"
 
       it "multiple mock" do
+        m <- mock [
+          "a" :> 10,
+          "b" :> 20
+        ]
         let
-          m = mock [
-            "a" :> 10,
-            "b" :> 20
-          ]
           _ = fun m "a"
           _ = fun m "b"
         m `hasNotBeenCalledWith` "c"
@@ -582,18 +580,16 @@ pmockSpec = do
       }
 
       it "Arbitrary Arguments All Match Arg1" do
+        m <- mock $ any :> 100
         let
-          m = mock $ any :> 100
-
           _ = fun m 30
           _ = fun m 40
 
         m `hasBeenCalledWith` (MatchAll $ matcher (_ >= 30) ">= 30")
 
       it "Arbitrary Arguments All Match Arg2" do
+        m <- mock $ "Title" :> any :> false
         let
-          m = mock $ "Title" :> any :> false
-
           _ = fun m "Title" 2020
           _ = fun m "Title" 2001
 
@@ -735,20 +731,17 @@ pmockSpec = do
 
     describe "Utility" do
       it "Create mock functions directly." do
-        let
-          fn = mockFun $ "a" :> true :> 300
+        fn <- mockFun $ "a" :> true :> 300
         fn "a" true `shouldEqual` 300
       mockIt "Supplemental runtime exceptions `it`" \_ -> do
-        let
-          m = mock $ 1 :> 2
+        m <- mock $ 1 :> 2
         -- If you change the following values to values different from the expected values, you will see that you have supplemented the exception.
         fun m 1 `shouldEqual` 2
 
     -- Type annotation is required depending on the monad to be returned.
     describe "Monad" do
       it "Return Monad." do
-        let
-          m = mock $ "Article Id" :> pure @Aff { title: "Article Title" }
+        m <- mock $ "Article Id" :> pure @Aff { title: "Article Title" }
 
         result <- fun m "Article Id"
 
@@ -757,8 +750,7 @@ pmockSpec = do
         m `hasBeenCalledWith` "Article Id"
       
       it "Return Monad(update)." do
-        let
-          updateMock = mock $ "New Title" :> pure @(StateT State Aff) unit
+        updateMock <- mock $ "New Title" :> pure @(StateT State Aff) unit
         _ <- runStateT (fun updateMock "New Title") {article: {title: "Old Title"}} 
         updateMock `hasBeenCalledWith` "New Title"
 
@@ -777,8 +769,8 @@ pmockSpec = do
     describe "anonymous mock" do
       describe "call" do
         it "simple mock"  do
+          m <- mock $ "a" :> 100
           let
-            m = mock $ "a" :> 100
             expected = joinWith "\n" [
               "Error: function was not called with expected arguments.",
               "  expected: \"a\"",
@@ -787,11 +779,11 @@ pmockSpec = do
           expectErrorWithMessage expected $ runRuntimeThrowableFunction \_ -> fun m "b"
 
         it "multi mock" do
+          m <- mock [
+            "aaa" :> 100 :> true,
+            "bbb" :> 200 :> false
+          ]
           let
-            m = mock [
-              "aaa" :> 100 :> true,
-              "bbb" :> 200 :> false
-            ]
             expected = joinWith "\n" [
               "Error: function was not called with expected arguments.",
               "  expected one of the following:",
@@ -804,8 +796,8 @@ pmockSpec = do
 
       describe "verify" do
         it "simple mock verify" do
+          m <- mock $ any@String :> 100
           let
-            m = mock $ any@String :> 100
             _ = fun m "A"
             expected = joinWith "\n" [
               "function was not called with expected arguments.",
@@ -815,8 +807,8 @@ pmockSpec = do
           expectErrorWithMessage expected $ m `hasBeenCalledWith` "X"
 
         it "count" do
+          m <- mock $ any@String :> 100
           let
-            m = mock $ any@String :> 100
             _ = fun m "A"
             expected = joinWith "\n" [
               "function was not called the expected number of times.",
@@ -826,8 +818,8 @@ pmockSpec = do
           expectErrorWithMessage expected $ m `hasBeenCalledTimes` 2 `with` "A"
 
         it "verifySequence" do
+          m <- mock $ any@String :> 100
           let
-            m = mock $ any@String :> 100
             _ = fun m "B"
             _ = fun m "C"
             _ = fun m "A"
@@ -843,8 +835,8 @@ pmockSpec = do
           expectErrorWithMessage expected $ m `hasBeenCalledInOrder` ["A", "B", "C"]
         
         it "verifySequence (count mismatch)" do
+          m <- mock $ any@String :> 100
           let
-            m = mock $ any@String :> 100
             _ = fun m "B"
             _ = fun m "C"
             expected = joinWith "\n" [
@@ -855,8 +847,8 @@ pmockSpec = do
           expectErrorWithMessage expected $ m `hasBeenCalledInOrder` ["A", "B", "C"]
         
         it "verifyPartiallySequence" do
+          m <- mock $ any@String :> 100
           let
-            m = mock $ any@String :> 100
             _ = fun m "B"
             _ = fun m "A"
             expected = joinWith "\n" [
@@ -871,8 +863,8 @@ pmockSpec = do
           expectErrorWithMessage expected $ m `hasBeenCalledInPartialOrder` ["A", "C"]
 
         it "verifyPartiallySequence (count mismatch)" do
+          m <- mock $ any@String :> 100
           let
-            m = mock $ any@String :> 100
             _ = fun m "B"
             expected = joinWith "\n" [
               "The number of parameters exceeds the number of function calls.",
@@ -884,8 +876,8 @@ pmockSpec = do
     describe "named mock" do
       describe "call" do
         it "simple mock"  do
+          m <- namedMock "mock function" $ "a" :> 100
           let
-            m = namedMock "mock function" $ "a" :> 100
             expected = joinWith "\n" [
               "Error: function `mock function` was not called with expected arguments.",
               "  expected: \"a\"",
@@ -894,11 +886,11 @@ pmockSpec = do
           expectErrorWithMessage expected $ runRuntimeThrowableFunction \_ -> fun m "b"
 
         it "multi mock" do
+          m <- namedMock "mock function" [
+            "aaa" :> 100 :> true,
+            "bbb" :> 200 :> false
+          ]
           let
-            m = namedMock "mock function" [
-              "aaa" :> 100 :> true,
-              "bbb" :> 200 :> false
-            ]
             expected = joinWith "\n" [
               "Error: function `mock function` was not called with expected arguments.",
               "  expected one of the following:",
@@ -911,8 +903,8 @@ pmockSpec = do
 
       describe "verify" do
         it "simple mock verify" do
+          m <- namedMock "mock function" $ any@String :> 100
           let
-            m = namedMock "mock function" $ any@String :> 100
             _ = fun m "A"
             expected = joinWith "\n" [
               "function `mock function` was not called with expected arguments.",
@@ -922,8 +914,8 @@ pmockSpec = do
           expectErrorWithMessage expected $ m `hasBeenCalledWith` "X"
 
         it "count" do
+          m <- namedMock "mock function" $ any@String :> 100
           let
-            m = namedMock "mock function" $ any@String :> 100
             _ = fun m "A"
             expected = joinWith "\n" [
               "function `mock function` was not called the expected number of times.",
@@ -933,8 +925,8 @@ pmockSpec = do
           expectErrorWithMessage expected $ m `hasBeenCalledTimes` 2 `with` "A"
 
         it "verifySequence" do
+          m <- namedMock "mock function" $ any@String :> 100
           let
-            m = namedMock "mock function" $ any@String :> 100
             _ = fun m "B"
             _ = fun m "C"
             _ = fun m "A"
@@ -950,8 +942,8 @@ pmockSpec = do
           expectErrorWithMessage expected $ m `hasBeenCalledInOrder` ["A", "B", "C"]
         
         it "verifySequence (count mismatch)" do
+          m <- namedMock "mockFunc" $ any@String :> 100
           let
-            m = namedMock "mockFunc" $ any@String :> 100
             _ = fun m "B"
             _ = fun m "C"
             expected = joinWith "\n" [
@@ -962,8 +954,8 @@ pmockSpec = do
           expectErrorWithMessage expected $ m `hasBeenCalledInOrder` ["A", "B", "C"]
         
         it "verifyPartiallySequence" do
+          m <- namedMock "mock function" $ any@String :> 100
           let
-            m = namedMock "mock function" $ any@String :> 100
             _ = fun m "B"
             _ = fun m "A"
             expected = joinWith "\n" [
@@ -978,8 +970,8 @@ pmockSpec = do
           expectErrorWithMessage expected $ m `hasBeenCalledInPartialOrder` ["A", "C"]
 
         it "verifyPartiallySequence (count mismatch)" do
+          m <- namedMock "mockFunc" $ any@String :> 100
           let
-            m = namedMock "mockFunc" $ any@String :> 100
             _ = fun m "B"
             expected = joinWith "\n" [
               "The number of parameters exceeds the number of function `mockFunc` calls.",

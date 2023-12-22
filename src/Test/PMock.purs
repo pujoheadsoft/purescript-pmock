@@ -44,6 +44,8 @@ import Data.String (joinWith)
 import Data.String.Regex (replace)
 import Data.String.Regex.Flags (noFlags)
 import Data.String.Regex.Unsafe (unsafeRegex)
+import Effect (Effect)
+import Effect.Class (class MonadEffect, liftEffect)
 import Effect.Exception (Error, throw)
 import Effect.Unsafe (unsafePerformEffect)
 import Partial.Unsafe (unsafeCrashWith)
@@ -55,21 +57,23 @@ import Test.Spec.Assertions (fail)
 data Mock fun params = Mock (Maybe MockName) fun (Verifier params)
 type MockName = String
 
-mock :: forall params fun verifyParams
+mock :: forall params fun verifyParams m
    . MockBuilder params fun verifyParams
+  => MonadEffect m
   => params
-  -> Mock fun verifyParams
-mock params = build Nothing params
+  -> m (Mock fun verifyParams)
+mock params = liftEffect $ build Nothing params
 
-namedMock :: forall params fun verifyParams
+namedMock :: forall params fun verifyParams m
    . MockBuilder params fun verifyParams
+  => MonadEffect m
   => MockName
   -> params
-  -> Mock fun verifyParams
-namedMock name params = build (Just name) params
+  -> m (Mock fun verifyParams)
+namedMock name params = liftEffect $ build (Just name) params
 
 class MockBuilder params fun verifyParams | params -> fun, params -> verifyParams where
-  build :: Maybe MockName -> params -> Mock fun verifyParams
+  build :: Maybe MockName -> params -> Effect (Mock fun verifyParams)
 
 instance instanceMockArrayArg9 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Show d, Eq d, Show e, Eq e, Show f, Eq f, Show g, Eq g, Show h, Eq h, Show i, Eq i)
   => MockBuilder
@@ -77,7 +81,7 @@ instance instanceMockArrayArg9 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Sho
     (a -> b -> c -> d -> e -> f -> g -> h -> i -> r)
     (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g #> Param h #> Param i) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 b2 c2 d2 e2 f2 g2 h2 i2 -> findReturnValueWithStore name params (p a2 :> p b2 :> p c2 :> p d2 :> p e2 :> p f2 :> p g2 :> p h2 :> p i2) s)
 else
 instance instanceMockArrayArg8 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Show d, Eq d, Show e, Eq e, Show f, Eq f, Show g, Eq g, Show h, Eq h)
@@ -86,7 +90,7 @@ instance instanceMockArrayArg8 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Sho
     (a -> b -> c -> d -> e -> f -> g -> h -> r)
     (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g #> Param h) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 b2 c2 d2 e2 f2 g2 h2 -> findReturnValueWithStore name params (p a2 :> p b2 :> p c2 :> p d2 :> p e2 :> p f2 :> p g2 :> p h2) s)
 else
 instance instanceMockArrayArg7 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Show d, Eq d, Show e, Eq e, Show f, Eq f, Show g, Eq g)
@@ -95,7 +99,7 @@ instance instanceMockArrayArg7 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Sho
     (a -> b -> c -> d -> e -> f -> g -> r)
     (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 b2 c2 d2 e2 f2 g2 -> findReturnValueWithStore name params (p a2 :> p b2 :> p c2 :> p d2 :> p e2 :> p f2 :> p g2) s)
 else
 instance instanceMockArrayArg6 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Show d, Eq d, Show e, Eq e, Show f, Eq f)
@@ -104,7 +108,7 @@ instance instanceMockArrayArg6 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Sho
     (a -> b -> c -> d -> e -> f -> r)
     (Param a #> Param b #> Param c #> Param d #> Param e #> Param f) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 b2 c2 d2 e2 f2 -> findReturnValueWithStore name params (p a2 :> p b2 :> p c2 :> p d2 :> p e2 :> p f2) s)
 else
 instance instanceMockArrayArg5 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Show d, Eq d, Show e, Eq e)
@@ -113,7 +117,7 @@ instance instanceMockArrayArg5 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Sho
     (a -> b -> c -> d -> e -> r)
     (Param a #> Param b #> Param c #> Param d #> Param e) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 b2 c2 d2 e2 -> findReturnValueWithStore name params (p a2 :> p b2 :> p c2 :> p d2 :> p e2) s)
 else
 instance instanceMockArrayArg4 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Show d, Eq d)
@@ -122,7 +126,7 @@ instance instanceMockArrayArg4 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Sho
     (a -> b -> c -> d -> r)
     (Param a #> Param b #> Param c #> Param d) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 b2 c2 d2 -> findReturnValueWithStore name params (p a2 :> p b2 :> p c2 :> p d2) s)
 else
 instance instanceMockArrayArg3 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c)
@@ -131,19 +135,19 @@ instance instanceMockArrayArg3 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c)
     (a -> b -> c -> r)
     (Param a #> Param b #> Param c) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 b2 c2 -> findReturnValueWithStore name params (p a2 :> p b2 :> p c2) s)
 else
 instance instanceMockArrayArg2 :: (Show a, Eq a, Show b, Eq b)
   => MockBuilder (Array (Param a #> Param b #> Param r)) (a -> b -> r) (Param a #> Param b) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 b2 -> findReturnValueWithStore name params (p a2 :> p b2) s)
 else
 instance instanceMockArrayArg1 :: (Show a, Eq a)
   => MockBuilder (Array (Param a #> Param r)) (a -> r) (Param a) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 -> findReturnValueWithStore name params (p a2) s)
 else
 instance instanceMockArg9 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Show d, Eq d, Show e, Eq e, Show f, Eq f, Show g, Eq g, Show h, Eq h, Show i, Eq i)
@@ -152,7 +156,7 @@ instance instanceMockArg9 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Show d, 
     (a -> b -> c -> d -> e -> f -> g -> h -> i -> r)
     (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g #> Param h #> Param i) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 b2 c2 d2 e2 f2 g2 h2 i2 ->
       extractReturnValueWithValidate name params (p a2 :> p b2 :> p c2 :> p d2 :> p e2 :> p f2 :> p g2 :> p h2 :> p i2) s)
 else
@@ -162,7 +166,7 @@ instance instanceMockArg8 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Show d, 
     (a -> b -> c -> d -> e -> f -> g -> h -> r)
     (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g #> Param h) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 b2 c2 d2 e2 f2 g2 h2 ->
       extractReturnValueWithValidate name params (p a2 :> p b2 :> p c2 :> p d2 :> p e2 :> p f2 :> p g2 :> p h2) s)
 else
@@ -172,7 +176,7 @@ instance instanceMockArg7 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Show d, 
     (a -> b -> c -> d -> e -> f -> g -> r)
     (Param a #> Param b #> Param c #> Param d #> Param e #> Param f #> Param g) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 b2 c2 d2 e2 f2 g2 ->
       extractReturnValueWithValidate name params (p a2 :> p b2 :> p c2 :> p d2 :> p e2 :> p f2 :> p g2) s)
 else
@@ -182,7 +186,7 @@ instance instanceMockArg6 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Show d, 
     (a -> b -> c -> d -> e -> f -> r)
     (Param a #> Param b #> Param c #> Param d #> Param e #> Param f) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 b2 c2 d2 e2 f2 -> extractReturnValueWithValidate name params (p a2 :> p b2 :> p c2 :> p d2 :> p e2 :> p f2) s)
 else
 instance instanceMockArg5 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Show d, Eq d, Show e, Eq e)
@@ -191,7 +195,7 @@ instance instanceMockArg5 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Show d, 
     (a -> b -> c -> d -> e -> r)
     (Param a #> Param b #> Param c #> Param d #> Param e) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 b2 c2 d2 e2 -> extractReturnValueWithValidate name params (p a2 :> p b2 :> p c2 :> p d2 :> p e2) s)
 else
 instance instanceMockArg4 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Show d, Eq d)
@@ -200,35 +204,35 @@ instance instanceMockArg4 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c, Show d, 
     (a -> b -> c -> d -> r)
     (Param a #> Param b #> Param c #> Param d) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 b2 c2 d2 -> extractReturnValueWithValidate name params (p a2 :> p b2 :> p c2 :> p d2) s)
 else
 instance instanceMockArg3 :: (Show a, Eq a, Show b, Eq b, Show c, Eq c)
   => MockBuilder (Param a #> Param b #> Param c #> Param r) (a -> b -> c -> r) (Param a #> Param b #> Param c) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 b2 c2 -> extractReturnValueWithValidate name params (p a2 :> p b2 :> p c2) s)
 else
 instance instanceMockArg2 :: (Show a, Eq a, Show b, Eq b)
   => MockBuilder (Param a #> Param b #> Param r) (a -> b -> r) (Param a #> Param b) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 b2 -> extractReturnValueWithValidate name params (p a2 :> p b2) s)
 else
 instance instanceMockArg1 :: (Show a, Eq a)
   => MockBuilder (Param a #> Param r) (a -> r) (Param a) where
   build name params = do
-    let s = store unit
+    s <- store unit
     createMock name s.calledParamsList (\a2 -> extractReturnValueWithValidate name params (p a2) s)
 
-createMock :: forall fun params. Eq params => Show params => Maybe MockName -> CalledParamsList params -> fun -> Mock fun params
-createMock name l fn = Mock name fn (Verifier l)
+createMock :: forall fun params. Eq params => Show params => Maybe MockName -> CalledParamsList params -> fun -> Effect (Mock fun params)
+createMock name l fn = pure $ Mock name fn (Verifier l)
 
-foreign import store :: forall params. Unit -> CalledParamsStore params
+foreign import store :: forall params. Unit -> Effect (CalledParamsStore params)
 
 type CalledParamsStore params = {
   calledParamsList :: CalledParamsList params,
-  store :: params -> Unit
+  store :: params -> Effect Unit
 }
 
 type CalledParamsList params = Array params
@@ -286,19 +290,21 @@ fun :: forall fun v. Mock fun v -> fun
 fun (Mock _ f _) = f
 
 mockFun ::
-  forall params fun verifyParams
+  forall params fun verifyParams m
   . MockBuilder params fun verifyParams
+  => MonadEffect m
   => params
-  -> fun
-mockFun params = mock params # fun
+  -> m fun
+mockFun params = mock params <#> fun
 
 namedMockFun ::
-  forall params fun verifyParams
+  forall params fun verifyParams m
   . MockBuilder params fun verifyParams
+  => MonadEffect m
   => String
   -> params
-  -> fun
-namedMockFun name params = namedMock name params # fun
+  -> m fun
+namedMockFun name params = namedMock name params <#> fun
 
 validateWithStoreParams :: forall a. Eq a => Show a => Maybe MockName -> CalledParamsStore a -> a -> a -> Unit
 validateWithStoreParams name s expected actual = validateParams name expected (storeCalledParams s actual)
