@@ -24,9 +24,7 @@ type Article = {title :: String, body :: String}
 
 main :: Effect Unit
 main = do
-  let
-    findArticle :: String -> Int -> Article
-    findArticle = mockFun $ "Title" :> 2023 :> {title: "ArticleTitle", body: "ArticleBody"}
+  findArticle <- mockFun $ "Title" :> 2023 :> {title: "ArticleTitle", body: "ArticleBody"}
   logShow $ findArticle "Title" 2023 -- { body: "ArticleBody", title: "ArticleTitle" }
 ```
 `mockFun` 関数には、呼び出されることを期待する引数を `:>` で区切って渡します。
@@ -52,8 +50,7 @@ import Test.Spec.Assertions (shouldEqual)
 spec :: Spec Unit
 spec = do
   it "verify example" do
-    let
-      m = mock $ "Title" :> 2023 :> false
+    m <- mock $ "Title" :> 2023 :> false
 
     -- execute function
     fun m "Title" 2023 `shouldEqual` false
@@ -84,8 +81,7 @@ import Test.Spec.Assertions (shouldEqual)
 spec :: Spec Unit
 spec = do
   it "named mock function test" do
-    let
-      f = namedMockFun "namedMock" $ "a" :> true :> 100
+    f <- namedMockFun "namedMock" $ "a" :> true :> 100
     100 `shouldEqual` f "b" true
 ```
 <pre>
@@ -101,14 +97,13 @@ Error: function `namedMock` was not called with expected arguments.
 ```haskell
 import Prelude
 
-import Test.PMock (hasBeenCalledTimes, mock, verifyCount, with, (:>))
+import Test.PMock (mock, verifyCount, (:>), hasBeenCalledTimes, with)
 import Test.Spec (Spec, it)
 
 spec :: Spec Unit
 spec = do
   it "verify count example" do
-    let
-      m = mock $ "Title" :> 2023 :> false
+    m <- mock $ "Title" :> 2023 :> false
 
     -- verify count
     verifyCount m 0 $ "Title" :> 2023
@@ -141,19 +136,18 @@ but was : 0
 ```haskell
 import Prelude
 
-import Test.PMock (CountVerifyMethod(..), fun, mock, verifyCount, (:>))
+import Test.PMock (CountVerifyMethod(..), fun, hasBeenCalledTimes, mock, (:>))
 import Test.Spec (Spec, it)
 
 spec :: Spec Unit
 spec = do
   it "verify example" do
+    m <- mock $ "Title" :> 2023 :> false
     let
-      m = mock $ "Title" :> 2023 :> false
-      
       _ = fun m "Title" 2023
       _ = fun m "Title" 2023
       _ = fun m "Title" 2023
-    verifyCount m (GreaterThanEqual 3) $ "Title" :> 2023
+    m `hasBeenCalledTimes` (GreaterThanEqual 3) $ "Title" :> 2023
 ```
 回数が一致しない場合は以下のようなメッセージが出力されます。
 <pre style="color: #D2706E">
@@ -184,8 +178,8 @@ spec :: Spec Unit
 spec = do
   describe "Example Spec" do
     it "verify exactly sequential order" do
+      m <- mock $ any :> unit
       let
-        m = mock $ any :> unit
         -- function call 3 times.
         _ = fun m "a"
         _ = fun m "b"
@@ -239,8 +233,8 @@ spec :: Spec Unit
 spec = do
   describe "Example Spec" do
     it "verify partially sequential order" do
+      m <- mock $ any :> unit
       let
-        m = mock $ any :> unit
         _ = fun m "a"
         _ = fun m "b"
         _ = fun m "c"
@@ -283,16 +277,14 @@ Matcherを使うと、期待される引数の設定や検証を柔軟に行う�
 ```haskell
 import Prelude
 
-import Test.PMock (Param, any, fun, mock, (:>))
+import Test.PMock (any, fun, mock, (:>))
 import Test.Spec (Spec, it)
 import Test.Spec.Assertions (shouldEqual)
 
 spec :: Spec Unit
 spec = do
   it "any match example" do
-    let
-      m = mock $ any :> 2023 :> false
-      
+    m <- mock $ any :> 2023 :> false      
     fun m "Title1"  2023 `shouldEqual` false -- OK
     fun m "Another" 2023 `shouldEqual` false -- OK
     fun m ""        2023 `shouldEqual` false -- OK
@@ -309,8 +301,7 @@ import Test.Spec (Spec, it)
 spec :: Spec Unit
 spec = do
   it "any match example" do
-    let
-      m = mock $ "Title" :> 2023 :> false
+    m <- mock $ "Title" :> 2023 :> false
       
     verifyCount m 0 $ (any :: Param String) :> (any :: Param Int)
 
@@ -334,8 +325,7 @@ import Test.Spec.Assertions (shouldEqual)
 spec :: Spec Unit
 spec = do
   it "any match example" do
-    let
-      m = mock $ "Title" :> matcher (\v -> v >= 2020) ">= 2020" :> false
+    m <- mock $ "Title" :> matcher (\v -> v >= 2020) ">= 2020" :> false
       
     fun m "Title" 2020 `shouldEqual` false -- OK
     fun m "Title" 2021 `shouldEqual` false -- OK
@@ -350,18 +340,16 @@ spec = do
 ```haskell
 import Prelude
 
-import Test.PMock (Param, VerifyMatchType(..), any, fun, matcher, mock, verify, (:>))
+import Test.PMock (VerifyMatchType(..), any, fun, matcher, mock, verify, (:>))
 import Test.Spec (Spec, it)
 
 spec :: Spec Unit
 spec = do
   it "any match example" do
+    m <- mock $ "Title" :> any :> false
     let
-      m = mock $ "Title" :> any :> false
-
       _ = fun m "Title" 2020
       _ = fun m "Title" 2001
-
     verify m $ MatchAll $ "Title" :> matcher (\v -> v > 2000) "> 2000"
 ```
 mock関数に対して複数回の呼び出しが予想される場合、`MatchAll` を使用することで、「すべて」の呼び出しが期待される値で行われたかどうかを検証することができます。
@@ -377,7 +365,7 @@ mock関数に対して複数回の呼び出しが予想される場合、`MatchA
 ```haskell
 import Prelude
 
-import Test.PMock (fun, mock, or, verify, (:>))
+import Test.PMock (fun, hasBeenCalledWith, mock, or, (:>))
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
@@ -385,23 +373,22 @@ spec :: Spec Unit
 spec = do
   describe "Example Spec" do
     it "OR Matcher test" do
-      let
-        m = mock $ 1 `or` 2 `or` 3 :> "OK"
+      m <- mock $ 1 `or` 2 `or` 3 :> "OK"
 
       fun m 1 `shouldEqual` "OK"
       fun m 2 `shouldEqual` "OK"
       fun m 3 `shouldEqual` "OK"
 
-      verify m 1
-      verify m 2
-      verify m 3
+      m `hasBeenCalledWith` 1
+      m `hasBeenCalledWith` 2
+      m `hasBeenCalledWith` 3
 ```
 
 `and`を使用すると次のように複数の条件を満たす場合のみ戻り値を返すことができます。
 ```haskell
 import Prelude
 
-import Test.PMock (fun, matcher, mock, verify, (:>))
+import Test.PMock (fun, hasBeenCalledWith, matcher, mock, (:>))
 import Test.PMock.Param (and)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
@@ -410,14 +397,13 @@ spec :: Spec Unit
 spec = do
   describe "Example Spec" do
     it "AND Matcher test" do
-      let
-        m = mock $ matcher (0 < _) "0 < x" `and` matcher (_ < 3) "x < 3" :> "OK"
+      m <- mock $ matcher (0 < _) "0 < x" `and` matcher (_ < 3) "x < 3" :> "OK"
 
       fun m 1 `shouldEqual` "OK"
       fun m 2 `shouldEqual` "OK"
 
-      verify m 1
-      verify m 2
+      m `hasBeenCalledWith` 1
+      m `hasBeenCalledWith` 2
 ```
 `notEqual`を使用すると次のように条件を反転させることができます。
 
@@ -433,14 +419,15 @@ spec :: Spec Unit
 spec = do
   describe "Example Spec" do
     it "Not Matcher test" do
-      let
-        m = mock $ notEqual 5 :> "OK"
+      m <- mock $ notEqual 5 :> "OK"
 
       fun m 4 `shouldEqual` "OK"
       fun m 6 `shouldEqual` "OK"
 ```
 次のように他の`Matcher`と組み合わせることもできます。
 ```haskell
+import Prelude
+
 import Test.PMock (fun, mock, notEqual, or, (:>))
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
@@ -449,8 +436,7 @@ spec :: Spec Unit
 spec = do
   describe "Example Spec" do
     it "Not Matcher test" do
-      let
-        m = mock $ notEqual (4 `or` 5) :> "OK"
+      m <- mock $ notEqual (4 `or` 5) :> "OK"
 
       fun m 3 `shouldEqual` "OK"
       fun m 6 `shouldEqual` "OK"
@@ -464,31 +450,30 @@ spec = do
 ```haskell
 import Prelude
 
-import Test.PMock (fun, mock, (:>))
+import Test.PMock (fun, hasBeenCalledWith, mock, (:>))
 import Test.Spec (Spec, it)
 import Test.Spec.Assertions (shouldEqual)
 
 spec :: Spec Unit
 spec = do
   it "multi mock example" do
-    let
-      m = mock $ [
-        "Aja" :> 1977,
-        "Gaucho" :> 1980,
-        "The Royal Scam" :> 1976
-      ]
+    m <- mock $ [
+      "Aja" :> 1977,
+      "Gaucho" :> 1980,
+      "The Royal Scam" :> 1976
+    ]
 
     fun m "Aja" `shouldEqual` 1977
     fun m "Gaucho" `shouldEqual` 1980
     fun m "The Royal Scam" `shouldEqual` 1976
 
-    verify m "Aja"
-    verify m "Gaucho"
-    verify m "The Royal Scam"
+    m `hasBeenCalledWith` "Aja"
+    m `hasBeenCalledWith` "Gaucho"
+    m `hasBeenCalledWith` "The Royal Scam"
 ```
 
 ## 実行時エラーについて
-期待していない引数で関数が呼び出された場合、テストは中止され、期待される引数と実際に呼び出しに使用された引数がメッセージとして出力されます。
+期待していない引数で関数が呼び出された場合、テストが中止され、期待される引数と実際に呼び出しに使用された引数がメッセージとして出力されるかもしれません。
 ```haskell
 import Prelude
 
@@ -499,8 +484,7 @@ import Test.Spec.Assertions (shouldEqual)
 spec :: Spec Unit
 spec = do
   it "throw runtime error example" do
-    let
-      m = mock $ "Aja" :> 1977
+    m <- mock $ "Aja" :> 1977
     fun m "Asia" `shouldEqual` 1977
 ```
 <pre style="color: #D2706E">
@@ -535,8 +519,7 @@ import Test.Spec.Assertions (shouldEqual)
 spec :: Spec Unit
 spec = do
   mockIt "catch runtime error example" \_ -> do
-    let
-      m = mock $ "Aja" :> 1977
+    m <- mock $ "Aja" :> 1977
     fun m "Asia" `shouldEqual` 1977
 ```
 <pre style="color: #D2706E">
@@ -558,22 +541,8 @@ import Test.Spec.Assertions (shouldEqual)
 spec :: Spec Unit
 spec = do
   it "catch runtime error example" \_ -> do
-    let
-      m = mock $ "Aja" :> 1977
+    m <- mock $ "Aja" :> 1977
     fun m "Asia" `shouldEqual` 1977
-```
-
-## Mockの型を明示する
-`Mock` 型の定義は
-
-`data Mock fun params = Mock fun (Verifier params)`
-
-となっており、最初の型パラメーターは、モックする関数の定義と一致します。
-
-次の型パラメーターは、verifyに使用するパラメーターの型を表しており、それぞれの型を`Param`で包み、演算子`#>`で結合します。
-```haskell
-m :: Mock (String -> Int -> Boolean) (Param String #> Param Int)
-m = mock $ "" :> 100 :> true
 ```
 
 ## Constraints
