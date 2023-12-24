@@ -2,6 +2,7 @@
 
 [![Latest release](http://img.shields.io/github/release/pujoheadsoft/purescript-pmock.svg)](https://github.com/pujoheadsoft/purescript-pmock/releases)
 [![Pursuit](https://pursuit.purescript.org/packages/purescript-pmock/badge)](https://pursuit.purescript.org/packages/purescript-pmock)
+[![CI](https://github.com/pujoheadsoft/purescript-pmock/workflows/CI/badge.svg)](https://github.com/pujoheadsoft/purescript-pmock/actions?query=workflow%3ACI+branch%3Amaster)
 
 pmock is mocking library for PureScript
 
