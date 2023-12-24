@@ -1,5 +1,6 @@
 # Dependencies
 .*
+!.github
 bower_components
 node_modules
 
