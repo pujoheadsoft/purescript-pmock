@@ -17,8 +17,8 @@ jobs:
         with:
           purescript: "0.15.12"
 
-      - run: npm install spago
+      - run: npm install spago-legacy@0.21.0
 
-      - run: spago build
+      - run: npx spago-legacy build
 
-      - run: spago test
+      - run: npx spago-legacy test
