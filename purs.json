@@ -1,0 +1,25 @@
+{
+  "name": "pmock",
+  "version": "0.10.1",
+  "license": "MIT",
+  "location": {
+    "githubOwner": "pujoheadsoft",
+    "githubRepo": "purescript-pmock"
+  },
+  "ref": "v0.10.1",
+  "dependencies": {
+    "arrays": ">=7.3.0 <7.3.1",
+    "control": ">=6.0.0 <6.0.1",
+    "effect": ">=4.0.0 <4.0.1",
+    "either": ">=6.1.0 <6.1.1",
+    "exceptions": ">=6.0.0 <6.0.1",
+    "foldable-traversable": ">=6.0.0 <6.0.1",
+    "maybe": ">=6.0.0 <6.0.1",
+    "partial": ">=4.0.0 <4.0.1",
+    "prelude": ">=6.0.1 <6.0.2",
+    "spec": ">=7.5.5 <7.5.6",
+    "strings": ">=6.0.1 <6.0.2",
+    "transformers": ">=6.0.0 <6.0.1",
+    "unsafe-coerce": ">=6.0.0 <6.0.1"
+  }
+}

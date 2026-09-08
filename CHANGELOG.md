@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.1] - 2026-09-09
+
+### Fixed
+
+- Added a Registry manifest that separates library dependencies from test-only dependencies, allowing the package to pass Registry validation.
+
 ## [0.10.0] - 2026-09-08
 
 ### Added
