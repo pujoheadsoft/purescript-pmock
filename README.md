@@ -438,6 +438,31 @@ spec = do
       fun m 6 `shouldEqual` "OK"
 ```
 
+## Mocking an Effect action
+
+An argument-free port such as `Effect a` can be mocked directly. The call is
+recorded when the `Effect` is executed, not when it is created or extracted
+with `fun`.
+
+```haskell
+import Prelude
+
+import Effect (Effect)
+import Test.PMock (fun, hasBeenRunTimes, mock)
+
+main :: Effect Unit
+main = do
+  loadProgress <- mock (pure [ 1, 2, 3 ] :: Effect (Array Int))
+  let action = fun loadProgress
+
+  loadProgress `hasBeenRunTimes` 0
+  progress <- action
+  loadProgress `hasBeenRunTimes` 1
+```
+
+Use this form for an actual `Effect a` port. The existing
+`unit :> effect` form continues to represent a `Unit -> Effect a` function.
+
 ## Multi Mock
 Sometimes you may want to change the value returned depending on the arguments passed.
 In such cases, multimocking can be used.
@@ -467,6 +492,42 @@ spec = do
     m `hasBeenCalledWith` "Gaucho"
     m `hasBeenCalledWith` "The Royal Scam"
 ```
+
+## Sequential responses
+
+`mockSequence` returns successive configured values when the same arguments
+are used repeatedly. Response positions are tracked independently for each
+argument combination. After the last matching value, the last value is
+returned again.
+
+```haskell
+m <- mockSequence
+  [ "same" :> 1
+  , "same" :> 2
+  ]
+
+fun m "same" `shouldEqual` 1
+fun m "same" `shouldEqual` 2
+fun m "same" `shouldEqual` 2
+```
+
+Argument-free Effect actions can also return successive results.
+
+```haskell
+loadProgress <- mockSequence
+  [ pure emptyProgress
+  , pure updatedProgress
+  ]
+
+first <- fun loadProgress
+second <- fun loadProgress
+
+loadProgress `hasBeenRunTimes` 2
+```
+
+Use `namedMockSequence` when the mock name should be included in failure
+messages. The behavior of the existing `mock [ ... ]` Multi Mock is unchanged:
+it dispatches by arguments and selects the first matching definition.
 
 ## About runtime errors
 If the test is called with arguments other than those set, the test is aborted and the expected arguments and the arguments actually used in the call are printed as a message.
@@ -542,4 +603,4 @@ spec = do
 
 ## Constraints
 * Only instances of eq and show are currently allowed as mock arguments.
-* The number of supported arguments is limited to 9. If you want to handle more than this number of arguments, define an instance of `MockBuilder`.
+* Function arity is not capped; argument chains are handled recursively.

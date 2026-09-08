@@ -10,7 +10,7 @@ import Data.Maybe (Maybe(..))
 import Data.Show.Generic (genericShow)
 import Data.String (joinWith)
 import Effect.Aff (Aff, Error)
-import Test.PMock (VerifyMatchType(..), and, any, fun, hasBeenCalledInOrder, hasBeenCalledInPartialOrder, hasBeenCalledTimes, hasBeenCalledTimesGreaterThan, hasBeenCalledTimesGreaterThanEqual, hasBeenCalledTimesLessThan, hasBeenCalledTimesLessThanEqual, hasBeenCalledWith, hasNotBeenCalledWith, matcher, mock, mockFun, namedMock, notEqual, or, with, (:>))
+import Test.PMock (VerifyMatchType(..), and, any, fun, hasBeenCalledInOrder, hasBeenCalledInPartialOrder, hasBeenCalledTimes, hasBeenCalledWith, matcher, mock, mockFun, namedMock, notEqual, or, with, (:>))
 import Test.PMockSpecs (expectErrorWithMessage, mockIt, runRuntimeThrowableFunction)
 import Test.Spec (Spec, SpecT, describe, it)
 import Test.Spec.Assertions (expectError, shouldEqual)
@@ -87,10 +87,10 @@ mockOrderTest f = describe f.name do
 pmockSpec :: Spec Unit
 pmockSpec = do
   describe "PMock Test" do
-    describe "Single calls" do
+    describe "Single-response mock" do
 
       mockTest {
-        name: "1 argument", 
+        name: "behavior",
         create: \_ -> mock $ "1" :> 1,
         expected: 1, 
         execute: \m -> fun m "1",
@@ -100,97 +100,9 @@ pmockSpec = do
         verifyFailed: \m -> m `hasBeenCalledWith` "2"
       }
 
+    describe "Multiple-response mock" do
       mockTest {
-        name: "2 arguments", 
-        create: \_ -> mock $ 100 :> "1" :> true,
-        expected: true, 
-        execute: \m -> fun m 100 "1",
-        executeFailed: Just \m -> fun m 100 "2",
-        verifyMock: \m -> m `hasBeenCalledWith` (100 :> "1"),
-        verifyCount: \m c -> m `hasBeenCalledTimes` c `with` (100 :> "1"),
-        verifyFailed: \m -> m `hasBeenCalledWith` (100 :> "2")
-      }
-
-      mockTest {
-        name: "3 arguments", 
-        create: \_ -> mock $ 100 :> "1" :> true :> 11.1,
-        expected: 11.1, 
-        execute: \m -> fun m 100 "1" true,
-        executeFailed: Just \m -> fun m 100 "1" false,
-        verifyMock: \m -> m `hasBeenCalledWith` (100 :> "1" :> true),
-        verifyCount: \m c -> m `hasBeenCalledTimes` c `with` (100 :> "1" :> true),
-        verifyFailed: \m -> m `hasBeenCalledWith` (100 :> "1" :> false)
-      }
-
-      mockTest {
-        name: "4 arguments", 
-        create: \_ -> mock $ 100 :> "1" :> true :> 11.1 :> [1, 2],
-        expected: [1, 2], 
-        execute: \m -> fun m 100 "1" true 11.1,
-        executeFailed: Just \m -> fun m 100 "1" true 11.0,
-        verifyMock: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1),
-        verifyCount: \m c -> m `hasBeenCalledTimes` c `with` (100 :> "1" :> true :> 11.1),
-        verifyFailed: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.0)
-      }
-
-      mockTest {
-        name: "5 arguments", 
-        create: \_ -> mock $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"},
-        expected: {name: "Name"}, 
-        execute: \m -> fun m 100 "1" true 11.1 [1, 2],
-        executeFailed: Just \m -> fun m 100 "1" true 11.1 [1, 3],
-        verifyMock: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2]),
-        verifyCount: \m c -> m `hasBeenCalledTimes` c `with` (100 :> "1" :> true :> 11.1 :> [1, 2]),
-        verifyFailed: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [2, 2])
-      }
-
-      mockTest {
-        name: "6 arguments", 
-        create: \_ -> mock $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20,
-        expected: 20, 
-        execute: \m -> fun m 100 "1" true 11.1 [1, 2] {name: "Name"},
-        executeFailed: Just \m -> fun m 100 "1" true 11.1 [1, 3] {name: "Nam"},
-        verifyMock: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"}),
-        verifyCount: \m c -> m `hasBeenCalledTimes` c `with` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"}),
-        verifyFailed: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Nome"})
-      }
-
-      mockTest {
-        name: "7 arguments", 
-        create: \_ -> mock $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X",
-        expected: "X", 
-        execute: \m -> fun m 100 "1" true 11.1 [1, 2] {name: "Name"} 20,
-        executeFailed: Just \m -> fun m 100 "1" true 11.1 [1, 3] {name: "Name"} 21,
-        verifyMock: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20),
-        verifyCount: \m c -> m `hasBeenCalledTimes` c `with` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20),
-        verifyFailed: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 19)
-      }
-
-      mockTest {
-        name: "8 arguments", 
-        create: \_ -> mock $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X" :> false,
-        expected: false, 
-        execute: \m -> fun m 100 "1" true 11.1 [1, 2] {name: "Name"} 20 "X",
-        executeFailed: Just \m -> fun m 100 "1" true 11.1 [1, 3] {name: "Name"} 20 "Y",
-        verifyMock: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X"),
-        verifyCount: \m c -> m `hasBeenCalledTimes` c `with` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X"),
-        verifyFailed: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "Z")
-      }
-
-      mockTest {
-        name: "9 arguments", 
-        create: \_ -> mock $ 100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X" :> false :> 0.1,
-        expected: 0.1, 
-        execute: \m -> fun m 100 "1" true 11.1 [1, 2] {name: "Name"} 20 "X" false,
-        executeFailed: Just \m -> fun m 100 "1" true 11.1 [1, 3] {name: "Name"} 20 "X" true,
-        verifyMock: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X" :> false),
-        verifyCount: \m c -> m `hasBeenCalledTimes` c `with` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X" :> false),
-        verifyFailed: \m -> m `hasBeenCalledWith` (100 :> "1" :> true :> 11.1 :> [1, 2] :> {name: "Name"} :> 20 :> "X" :> true)
-      }
-
-    describe "Multiple calls" do
-      mockTest {
-        name: "1 argument", 
+        name: "behavior",
         create: \_ -> mock $ [
           "1" :> 10, 
           "2" :> 20
@@ -213,271 +125,6 @@ pmockSpec = do
         ,
         verifyFailed: \m -> m `hasBeenCalledWith` "3"
       }
-
-      mockTest {
-        name: "2 arguments", 
-        create: \_ -> mock $ [
-          "1" :> 10 :> true, 
-          "2" :> 20 :> false
-        ],
-        expected: [
-          true, 
-          false
-        ], 
-        execute: \m -> [
-          fun m "1" 10, 
-          fun m "2" 20
-        ],
-        executeFailed: Just \m -> [ fun m "2" 10 ],
-        verifyMock: \m -> do 
-          m `hasBeenCalledWith` ("1" :> 10)
-          m `hasBeenCalledWith` ("2" :> 20)
-        ,
-        verifyCount: \m c -> do
-          m `hasBeenCalledTimes` c `with` ("1" :> 10)
-          m `hasBeenCalledTimes` c `with` ("2" :> 20)
-        ,
-        verifyFailed: \m -> m `hasBeenCalledWith` ("1" :> 30)
-      }
-
-      mockTest {
-        name: "3 arguments", 
-        create: \_ -> mock $ [
-          "1" :> 10 :> true  :> "a1", 
-          "2" :> 20 :> false :> "a2"
-        ],
-        expected: [
-          "a1", 
-          "a2"
-        ], 
-        execute: \m -> [
-          fun m "1" 10 true, 
-          fun m "2" 20 false
-        ],
-        executeFailed: Just \m -> [ fun m "2" 20 true ],
-        verifyMock: \m -> do 
-          m `hasBeenCalledWith` ("1" :> 10 :> true)
-          m `hasBeenCalledWith` ("2" :> 20 :> false)
-        ,
-        verifyCount: \m c -> do
-          m `hasBeenCalledTimes` c `with` ("1" :> 10 :> true)
-          m `hasBeenCalledTimes` c `with` ("2" :> 20 :> false)
-        ,
-        verifyFailed: \m -> m `hasBeenCalledWith` ("1" :> 10 :> false)
-      }
-
-      mockTest {
-        name: "4 arguments", 
-        create: \_ -> mock $ [
-          "1" :> 10 :> true  :> "a1" :> 2.0, 
-          "2" :> 20 :> false :> "a2" :> 3.0
-        ],
-        expected: [
-          2.0, 
-          3.0
-        ], 
-        execute: \m -> [
-          fun m "1" 10 true  "a1", 
-          fun m "2" 20 false "a2"
-        ],
-        executeFailed: Just \m -> [ fun m "2" 20 false "a1" ],
-        verifyMock: \m -> do 
-          m `hasBeenCalledWith` ("1" :> 10 :> true  :> "a1")
-          m `hasBeenCalledWith` ("2" :> 20 :> false :> "a2")
-        ,
-        verifyCount: \m c -> do
-          m `hasBeenCalledTimes` c `with` ("1" :> 10 :> true  :> "a1")
-          m `hasBeenCalledTimes` c `with` ("2" :> 20 :> false :> "a2")
-        ,
-        verifyFailed: \m -> m `hasBeenCalledWith` ("1" :> 10 :> true :> "a3")
-      }
-
-      mockTest {
-        name: "5 arguments", 
-        create: \_ -> mock $ [
-          "1" :> 10 :> true  :> "a1" :> 2.0 :> false, 
-          "2" :> 20 :> false :> "a2" :> 3.0 :> true
-        ],
-        expected: [
-          false, 
-          true
-        ], 
-        execute: \m -> [
-          fun m "1" 10 true  "a1" 2.0, 
-          fun m "2" 20 false "a2" 3.0
-        ],
-        executeFailed: Just \m -> [ fun m "2" 20 false "a2" 3.1 ],
-        verifyMock: \m -> do 
-          m `hasBeenCalledWith` ("1" :> 10 :> true  :> "a1" :> 2.0)
-          m `hasBeenCalledWith` ("2" :> 20 :> false :> "a2" :> 3.0)
-        ,
-        verifyCount: \m c -> do
-          m `hasBeenCalledTimes` c `with` ("1" :> 10 :> true  :> "a1" :> 2.0)
-          m `hasBeenCalledTimes` c `with` ("2" :> 20 :> false :> "a2" :> 3.0)
-        ,
-        verifyFailed: \m -> m `hasBeenCalledWith` ("1" :> 10 :> true :> "a1" :> 1.0)
-      }
-
-      mockTest {
-        name: "6 arguments", 
-        create: \_ -> mock $ [
-          "1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2", 
-          "2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3"
-        ],
-        expected: [
-          "b2", 
-          "b3"
-        ], 
-        execute: \m -> [
-          fun m "1" 10 true  "a1" 2.0 false, 
-          fun m "2" 20 false "a2" 3.0 true
-        ],
-        executeFailed: Just \m -> [ fun m "2" 20 false "a2" 3.0 false ],
-        verifyMock: \m -> do 
-          m `hasBeenCalledWith` ("1" :> 10 :> true  :> "a1" :> 2.0 :> false)
-          m `hasBeenCalledWith` ("2" :> 20 :> false :> "a2" :> 3.0 :> true)
-        ,
-        verifyCount: \m c -> do
-          m `hasBeenCalledTimes` c `with` ("1" :> 10 :> true  :> "a1" :> 2.0 :> false)
-          m `hasBeenCalledTimes` c `with` ("2" :> 20 :> false :> "a2" :> 3.0 :> true)
-        ,
-        verifyFailed: \m -> m `hasBeenCalledWith` ("1" :> 10 :> true :> "a1" :> 2.0 :> true)
-      }
-
-      mockTest {
-        name: "7 arguments", 
-        create: \_ -> mock $ [
-          "1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200, 
-          "2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300
-        ],
-        expected: [
-          200, 
-          300
-        ], 
-        execute: \m -> [
-          fun m "1" 10 true  "a1" 2.0 false "b2", 
-          fun m "2" 20 false "a2" 3.0 true  "b3"
-        ],
-        executeFailed: Just \m -> [ fun m "2" 20 false "a2" 3.0 true "b2" ],
-        verifyMock: \m -> do 
-          m `hasBeenCalledWith` ("1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2")
-          m `hasBeenCalledWith` ("2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3")
-        ,
-        verifyCount: \m c -> do
-          m `hasBeenCalledTimes` c `with` ("1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2")
-          m `hasBeenCalledTimes` c `with` ("2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3")
-        ,
-        verifyFailed: \m -> m `hasBeenCalledWith` ("1" :> 10 :> true :> "a1" :> 2.0 :> false :> "b3")
-      }
-
-      mockTest {
-        name: "8 arguments", 
-        create: \_ -> mock $ [
-          "1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200 :> true,
-          "2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300 :> false
-        ],
-        expected: [
-          true, 
-          false
-        ], 
-        execute: \m -> [
-          fun m "1" 10 true  "a1" 2.0 false "b2" 200, 
-          fun m "2" 20 false "a2" 3.0 true  "b3" 300
-        ],
-        executeFailed: Just \m -> [ fun m "2" 20 false "a2" 3.0 true "b3" 200 ],
-        verifyMock: \m -> do 
-          m `hasBeenCalledWith` ("1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200)
-          m `hasBeenCalledWith` ("2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300)
-        ,
-        verifyCount: \m c -> do
-          m `hasBeenCalledTimes` c `with` ("1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200)
-          m `hasBeenCalledTimes` c `with` ("2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300)
-        ,
-        verifyFailed: \m -> m `hasBeenCalledWith` ("1" :> 10 :> true :> "a1" :> 2.0 :> false :> "b2" :> 300)
-      }
-
-      mockTest {
-        name: "9 arguments", 
-        create: \_ -> mock $ [
-          "1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200 :> true  :> "c3",
-          "2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300 :> false :> "c4"
-        ],
-        expected: [
-          "c3", 
-          "c4"
-        ], 
-        execute: \m -> [
-          fun m "1" 10 true  "a1" 2.0 false "b2" 200 true, 
-          fun m "2" 20 false "a2" 3.0 true  "b3" 300 false
-        ],
-        executeFailed: Just \m -> [ fun m "2" 20 false "a2" 3.0 true "b3" 300 true ],
-        verifyMock: \m -> do 
-          m `hasBeenCalledWith` ("1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200 :> true)
-          m `hasBeenCalledWith` ("2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300 :> false)
-        ,
-        verifyCount: \m c -> do
-          m `hasBeenCalledTimes` c `with` ("1" :> 10 :> true  :> "a1" :> 2.0 :> false :> "b2" :> 200 :> true)
-          m `hasBeenCalledTimes` c `with` ("2" :> 20 :> false :> "a2" :> 3.0 :> true  :> "b3" :> 300 :> false)
-        ,
-        verifyFailed: \m -> m `hasBeenCalledWith` ("1" :> 10 :> true :> "a1" :> 2.0 :> false :> "b2" :> 200 :> false)
-      }
-
-    describe "Specify the number of times in detail" do
-      it "GreaterThanEqual" do
-        m <- mock $ "a" :> 10
-        let 
-          _ = fun m "a"
-          _ = fun m "a"
-          _ = fun m "a"
-        m `hasBeenCalledTimesGreaterThanEqual` 3 `with` "a"
-      it "LessThanEqual" do
-        m <- mock $ "a" :> 10
-        let 
-          _ = fun m "a"
-          _ = fun m "a"
-          _ = fun m "a"
-        m `hasBeenCalledTimesLessThanEqual` 3 `with` "a"
-      it "GreaterThan" do
-        m <- mock $ "a" :> 10
-        let   
-          _ = fun m "a"
-          _ = fun m "a"
-          _ = fun m "a"
-        m `hasBeenCalledTimesGreaterThan` 2 `with` "a"
-      it "LessThan" do
-        m <- mock $ "a" :> 10
-        let 
-          _ = fun m "a"
-          _ = fun m "a"
-          _ = fun m "a"
-        m `hasBeenCalledTimesLessThan` 4 `with` "a"
-
-    describe "has not been called" do
-      it "simple mock" do
-        m <- mock $ "a" :> 10
-        let
-          _ = fun m "a"
-        m `hasNotBeenCalledWith` "b"
-
-      it "any matcher" do
-        m <- mock $ "a" :> 10
-        m `hasNotBeenCalledWith` any@String
-
-      it "failed" do
-        m <- mock $ "a" :> 10
-        let
-          _ = fun m "a"
-        expectError $ hasNotBeenCalledWith m "a"
-
-      it "multiple mock" do
-        m <- mock [
-          "a" :> 10,
-          "b" :> 20
-        ]
-        let
-          _ = fun m "a"
-          _ = fun m "b"
-        m `hasNotBeenCalledWith` "c"
 
     describe "Matcher" do
       mockTest {
@@ -979,18 +626,6 @@ pmockSpec = do
               "  number of params:         2"
             ]
           expectErrorWithMessage expected $ m `hasBeenCalledInPartialOrder` ["A", "C"]
-
-  describe "Cons" do
-    describe "Show" do
-      it "2 arguments" do
-        show (10 :> true) `shouldEqual` "10,true"
-      it "3 arguments" do
-        show ("1" :> false :> [3, 4]) `shouldEqual` "\"1\",false,[3,4]"
-    describe "Eq" do
-      it "2 arguments" do
-        (1 :> "2") `shouldEqual` (1 :> "2")
-      it "3 arguments" do
-        ("1" :> false :> [3, 4]) `shouldEqual` ("1" :> false :> [3, 4])
 
 type Article = {
   title :: String

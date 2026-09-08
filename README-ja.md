@@ -441,6 +441,31 @@ spec = do
       fun m 6 `shouldEqual` "OK"
 ```
 
+## 引数なし Effect のモック
+
+`Effect a`のような引数なしのPortは、そのままモックにできます。呼び出しは
+`Effect`を生成した時や`fun`で取り出した時ではなく、実際に実行した時に記録
+されます。
+
+```haskell
+import Prelude
+
+import Effect (Effect)
+import Test.PMock (fun, hasBeenRunTimes, mock)
+
+main :: Effect Unit
+main = do
+  loadProgress <- mock (pure [ 1, 2, 3 ] :: Effect (Array Int))
+  let action = fun loadProgress
+
+  loadProgress `hasBeenRunTimes` 0
+  progress <- action
+  loadProgress `hasBeenRunTimes` 1
+```
+
+実際のPortが`Effect a`なら、この形式を使います。従来の
+`unit :> effect`は、これまでどおり`Unit -> Effect a`という関数を表します。
+
 ## Multi Mock
 引数によって、返す値を変えたいこともあります。
 そんな時に使えるのが Multi Mock です。
@@ -470,6 +495,41 @@ spec = do
     m `hasBeenCalledWith` "Gaucho"
     m `hasBeenCalledWith` "The Royal Scam"
 ```
+
+## 戻り値を順番に返す
+
+`mockSequence`は、同じ引数で繰り返し呼ばれたとき、設定された戻り値を順番に
+返します。現在位置は引数の組み合わせごとに独立して管理されます。最後の値
+まで到達した後は、最後の値を繰り返し返します。
+
+```haskell
+m <- mockSequence
+  [ "same" :> 1
+  , "same" :> 2
+  ]
+
+fun m "same" `shouldEqual` 1
+fun m "same" `shouldEqual` 2
+fun m "same" `shouldEqual` 2
+```
+
+引数なしのEffectでも、戻り値を順番に返せます。
+
+```haskell
+loadProgress <- mockSequence
+  [ pure emptyProgress
+  , pure updatedProgress
+  ]
+
+first <- fun loadProgress
+second <- fun loadProgress
+
+loadProgress `hasBeenRunTimes` 2
+```
+
+失敗メッセージへ名前を表示したい場合は`namedMockSequence`を使用します。
+既存の`mock [ ... ]`によるMulti Mockの挙動は変わりません。引数によって
+振り分け、最初に一致した定義を使用します。
 
 ## 実行時エラーについて
 期待していない引数で関数が呼び出された場合、テストが中止され、期待される引数と実際に呼び出しに使用された引数がメッセージとして出力されるかもしれません。
@@ -546,4 +606,4 @@ spec = do
 
 ## Constraints
 * 現在、mockの引数として使用できるのはeqとshowのインスタンスのみです。
-* サポートされている引数の数は有限で、9個に制限されています。この数以上の引数を扱いたい場合は、`MockBuilder`のインスタンスを定義してください。
+* 関数の引数の数に上限はありません。引数列は再帰的に処理されます。
