@@ -16,9 +16,8 @@ jobs:
       - uses: purescript-contrib/setup-purescript@main
         with:
           purescript: "0.15.12"
+          spago: "0.93.44"
 
-      - run: npm install spago-legacy@0.21.0
+      - run: spago build --pedantic-packages
 
-      - run: npx spago-legacy build
-
-      - run: npx spago-legacy test
+      - run: spago test --pedantic-packages

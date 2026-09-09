@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.2] - 2026-09-09
+
+### Fixed
+
+- Migrated to the current Spago configuration format and separated the test-only `aff` dependency from library dependencies so Registry publishing succeeds.
+
 ## [0.10.1] - 2026-09-09
 
 ### Fixed

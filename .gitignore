@@ -6,4 +6,5 @@ node_modules
 
 # Generated files
 .psci
+generated-docs
 output
