@@ -27,7 +27,7 @@ jobs:
       - uses: purescript-contrib/setup-purescript@main
         with:
           purescript: ${{ matrix.purescript }}
-          spago: "0.93.44"
+          spago: "1.0.4"
 
       - run: spago upgrade --package-set ${{ matrix.package-set }}
 
