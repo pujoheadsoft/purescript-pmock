@@ -2,7 +2,7 @@ package:
   name: pmock
   description: PureScript Mock
   publish:
-    version: 1.0.0
+    version: 1.0.1
     license: MIT
     location:
       githubOwner: pujoheadsoft

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.1] - 2026-09-11
+
+### Documentation
+
+- Clarified that `withMock` and `expects` provide declaration-first verification and are not specific to wrapped mock functions.
+- Clarified that wrapped functions cannot be identified as their original mocks during post-hoc verification.
+
 ## [1.0.0] - 2026-09-11
 
 ### Added
