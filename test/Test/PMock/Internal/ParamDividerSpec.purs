@@ -1,10 +1,10 @@
-module Test.PMock.ParamDividerSpec (paramDividerSpec) where
+module Test.PMock.Internal.ParamDividerSpec (paramDividerSpec) where
 
 import Prelude
 
-import Test.PMock.Cons (type (#>), (#>))
-import Test.PMock.Param (Param, param)
-import Test.PMock.ParamDivider (args, returnValue)
+import Test.PMock.Internal.Cons (type (#>), (#>))
+import Test.PMock.Internal.Param (Param, param)
+import Test.PMock.Internal.ParamDivider (args, returnValue)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 

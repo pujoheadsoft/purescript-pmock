@@ -1,4 +1,4 @@
-export const _runRuntimeThrowableFunction = function(runtimeThrowableFunction) {
+export const runRuntimeThrowableFunction = function(runtimeThrowableFunction) {
   let result;
   try {
     result = runtimeThrowableFunction();
@@ -11,5 +11,5 @@ export const _runRuntimeThrowableFunction = function(runtimeThrowableFunction) {
   return {
     hasError: false,
     result
-  }
-}
+  };
+};

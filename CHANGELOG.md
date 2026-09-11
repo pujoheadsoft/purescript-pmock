@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0] - 2026-09-11
+
+### Added
+
+- Added `stub` for creating test doubles that do not record calls.
+- Added directly callable mocks that can be passed to function- and `Effect`-typed dependencies without extracting a function from a handle.
+- Added `withMock` and `expects` for declaring expectations with a mock and verifying them when the scope exits.
+- Added a shared expectation DSL for total call counts, argument-specific call counts, exact order, and partial order.
+- Added `never`, `once`, `times`, `atLeast`, `atMost`, `greaterThan`, and `lessThan` call-count specifications.
+- Added predicate matchers that do not require `Eq` or `Show` for the argument type, with optional actual-value rendering through `matcherBy`.
+- Added labels and diagnostics that can show the call with the longest matching rendered prefix, string and record differences, and call history.
+- Added `Test.PMock.Spec.mockIt` for reporting synchronous Stub and Mock exceptions as `purescript-spec` failures.
+
+### Changed
+
+- Changed `mock` to return the mocked function or `Effect` directly instead of a `Mock` handle.
+- Replaced constructor-specific naming APIs with the independent `label` modifier.
+- Replaced the 0.10 post-hoc verification functions with `shouldBeCalled` and the shared expectation DSL.
+- Changed sequential responses to use `mock do onCase ...`; calls matching the same complete set of cases share a response position.
+- Preserved the array-based Multi Mock behavior: `mock [ ... ]` continues to use the first matching definition.
+- Kept argument-free `Effect a` recording at execution time and retained function construction without a fixed arity limit.
+
+### Removed
+
+- Removed the public `Mock` handle and the need for `fun`.
+- Removed `mockFun`, `namedMockFun`, `namedMock`, `namedMockSequence`, and the old `hasBeen*` verification functions from the recommended API.
+- Removed internal verification representations such as `CountVerifyMethod` and `VerifyMatchType` from the public API.
+
+See the README migration table for the complete 0.10-to-1.0 API mapping.
+
 ## [0.10.2] - 2026-09-09
 
 ### Fixed

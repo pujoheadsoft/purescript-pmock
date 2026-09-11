@@ -1,8 +1,8 @@
-module Test.PMock.ConsSpec (consSpec) where
+module Test.PMock.Internal.ConsSpec (consSpec) where
 
 import Prelude
 
-import Test.PMock.Cons ((#>))
+import Test.PMock.Internal.Cons ((#>))
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 

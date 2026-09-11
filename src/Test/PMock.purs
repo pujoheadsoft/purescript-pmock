@@ -1,64 +1,47 @@
 module Test.PMock
-  ( Mock
-  , module Builder
-  , module Cons
+  ( module Builder
+  , module Expectation
   , module Param
-  , module Verify
+  , module Scope
+  , module Stub
   ) where
 
-import Test.PMock.Builder
-  ( class MockBuilder
-  , class MockSequenceBuilder
-  , build
-  , buildSequence
-  , fun
-  , mock
-  , mockFun
-  , mockSequence
-  , namedMock
-  , namedMockFun
-  , namedMockSequence
-  ) as Builder
-import Test.PMock.Cons (type (#>), Cons(..), (#>)) as Cons
+import Test.PMock.Builder (Label, label, mock) as Builder
+import Test.PMock.Expectation
+  ( Expectations
+  , TimesSpec
+  , atLeast
+  , atMost
+  , greaterThan
+  , lessThan
+  , called
+  , calledWith
+  , calledInOrder
+  , calledInPartialOrder
+  , anything
+  , inOrderWith
+  , inPartialOrderWith
+  , never
+  , once
+  , times
+  , with
+  ) as Expectation
 import Test.PMock.Param
-  ( class ConsGen
-  , class LogicalMatcher
-  , class NotMatcher
-  , Matcher
-  , Param(..)
+  ( Param
   , and
   , any
-  , cons
   , matcher
+  , matcherBy
+  , matcher_
   , notEqual
   , or
   , param
-  , value
   , (:>)
   ) as Param
-import Test.PMock.Types as Types
-import Test.PMock.Verify
-  ( class Verify
-  , class VerifyCount
-  , class VerifyOrder
-  , CountVerifyMethod(..)
-  , VerifyMatchType(..)
-  , hasBeenCalledInOrder
-  , hasBeenCalledInPartialOrder
-  , hasBeenCalledTimes
-  , hasBeenCalledTimesGreaterThan
-  , hasBeenCalledTimesGreaterThanEqual
-  , hasBeenCalledTimesLessThan
-  , hasBeenCalledTimesLessThanEqual
-  , hasBeenCalledWith
-  , hasBeenRunTimes
-  , hasNotBeenCalledWith
-  , showCalledParams
-  , verify
-  , verifyCount
-  , verifyPartiallySequence
-  , verifySequence
-  , with
-  ) as Verify
-
-type Mock fun params = Types.Mock fun params
+import Test.PMock.Stub
+  ( Cases
+  , cases
+  , onCase
+  , stub
+  ) as Stub
+import Test.PMock.Scope (expects, shouldBeCalled, withMock) as Scope

@@ -1,9 +1,9 @@
-module Test.PMock.TypesSpec (typesSpec) where
+module Test.PMock.Internal.TypesSpec (typesSpec) where
 
 import Prelude
 
 import Data.Maybe (Maybe(..))
-import Test.PMock.Types (Mock(..), Verifier(..))
+import Test.PMock.Internal.Types (Mock(..), Verifier(..))
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 

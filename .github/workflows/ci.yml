@@ -7,7 +7,18 @@ on:
 
 jobs:
   test:
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: current
+            purescript: "0.15.15"
+            package-set: "80.9.0"
+          - name: 0.10-compatible
+            purescript: "0.15.12"
+            package-set: "46.0.2"
     steps:
       - uses: actions/checkout@v2
 
@@ -15,8 +26,10 @@ jobs:
 
       - uses: purescript-contrib/setup-purescript@main
         with:
-          purescript: "0.15.12"
+          purescript: ${{ matrix.purescript }}
           spago: "0.93.44"
+
+      - run: spago upgrade --package-set ${{ matrix.package-set }}
 
       - run: spago build --pedantic-packages
 

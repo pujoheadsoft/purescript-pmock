@@ -1,0 +1,606 @@
+# purescript-pmock
+
+[![Latest release](http://img.shields.io/github/release/pujoheadsoft/purescript-pmock.svg)](https://github.com/pujoheadsoft/purescript-pmock/releases)
+[![Pursuit](https://pursuit.purescript.org/packages/purescript-pmock/badge)](https://pursuit.purescript.org/packages/purescript-pmock)
+[![CI](https://github.com/pujoheadsoft/purescript-pmock/workflows/CI/badge.svg)](https://github.com/pujoheadsoft/purescript-pmock/actions?query=workflow%3ACI+branch%3Amaster)
+
+pmock is mocking library for PureScript
+
+[日本語版 README](https://github.com/pujoheadsoft/purescript-pmock/blob/master/README-ja.md)
+
+## Installation
+
+Install with [Spago](https://github.com/purescript/spago):
+```
+spago install pmock
+```
+
+## Use mock function
+The `mockFun` function can be used to create mock functions.
+```haskell
+module Main where
+
+import Prelude
+
+import Effect (Effect)
+import Effect.Console (logShow)
+import Test.PMock (mockFun, (:>))
+
+type Article = {title :: String, body :: String}
+
+main :: Effect Unit
+main = do
+  findArticle <- mockFun $ "Title" :> 2023 :> {title: "ArticleTitle", body: "ArticleBody"}
+  logShow $ findArticle "Title" 2023 -- { body: "ArticleBody", title: "ArticleTitle" }
+```
+The `mockFun` function is passed arguments that are expected to be called, separated by `:>`.
+The last value separated by a `:>` is the return value.
+This is similar to a type declaration where types are separated by `->` and the last separated type is the return type.
+
+## Verifying function calls
+The Mock type can be used to verify the call.
+In the first example, we used `mockFun` to create the mock function directly, but when using the `Mock` type, we use `mock`.
+In this case, the mock function can be taken out of the Mock type by using `fun`.
+```haskell
+import Prelude
+
+import Test.PMock (fun, mock, verify, (:>), hasBeenCalledWith )
+import Test.Spec (Spec, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  it "verify example" do
+    m <- mock $ "Title" :> 2023 :> false
+
+    -- execute function
+    fun m "Title" 2023 `shouldEqual` false
+
+    -- verify
+    verify m $ "Title" :> 2023
+
+    -- Another way to write this is
+    m `hasBeenCalledWith` ("Title" :> 2023)
+```
+If the verify does not match, the following message is output.
+<pre style="color: #D2706E">
+Function was not called with expected arguments.
+expected: "Another Title",2022
+but was : "Title",2023
+</pre>
+
+## Naming a mock function
+You can name your mock functions with the `namedMockFun` and `namedMock` functions.
+This name is used for messages when a mock function fails to call or verify.
+This is useful if you are using multiple mock functions and want to know which mock function failed to call.
+```haskell
+import Prelude
+
+import Test.PMock (namedMockFun, (:>))
+import Test.Spec (Spec, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  it "named mock function test" do
+    f <- namedMockFun "namedMock" $ "a" :> true :> 100
+    100 `shouldEqual` f "b" true
+```
+<pre>
+Error: function `namedMock` was not called with expected arguments.
+  expected: "a",true
+  but was : "b",true
+</pre>
+
+## Verifying the number of function calls
+`verifyCount` can be used to verify the number of times a mock function has been called.
+This allows you to verify that a function has not been called.
+```haskell
+import Prelude
+
+import Test.PMock (mock, verifyCount, (:>), hasBeenCalledTimes, with)
+import Test.Spec (Spec, it)
+
+spec :: Spec Unit
+spec = do
+  it "verify count example" do
+    m <- mock $ "Title" :> 2023 :> false
+
+    -- verify count
+    verifyCount m 0 $ "Title" :> 2023
+
+    -- Another way to write this is
+    m `hasBeenCalledTimes` 0 $ "Title" :> 2023
+    m `hasBeenCalledTimes` 0 `with` ("Title" :> 2023)
+```
+If the verify count does not match, the following message is output.
+<pre style="color: #D2706E">
+✗ verify count example:
+
+Function was not called the expected number of times.
+expected: 1
+but was : 0
+</pre>
+
+## Specify the verify count method
+There are four validation methods that can be used
+
+`GreaterThanEqual`
+
+`LessThanEqual`
+
+`GreaterThan`
+
+`LessThan`
+
+Here is an example of use
+```haskell
+import Prelude
+
+import Test.PMock (CountVerifyMethod(..), fun, hasBeenCalledTimes, mock, (:>))
+import Test.Spec (Spec, it)
+
+spec :: Spec Unit
+spec = do
+  it "verify example" do
+    m <- mock $ "Title" :> 2023 :> false
+    let
+      _ = fun m "Title" 2023
+      _ = fun m "Title" 2023
+      _ = fun m "Title" 2023
+    m `hasBeenCalledTimes` (GreaterThanEqual 3) $ "Title" :> 2023
+```
+If the verify count does not match, the following message is output.
+<pre style="color: #D2706E">
+Function was not called the expected number of times.
+expected: >= 4
+but was : 3
+</pre>
+Another way to write this is.
+```haskell
+m `hasBeenCalledTimesGreaterThan` 0 `with` ("Title" :> 2023)
+m `hasBeenCalledTimesGreaterThanEqual` 0 `with` ("Title" :> 2023)
+m `hasBeenCalledTimesLessThan` 10 `with` ("Title" :> 2023)
+m `hasBeenCalledTimesLessThanEqual` 10 `with` ("Title" :> 2023)
+```
+
+## Verifying function call sequential order
+### Strict call order valification
+verifySequence` verifies that the functions were called in the specified order.
+
+For all calls to the function, it is verified that the order and values are exactly the same.
+```haskell
+import Prelude
+
+import Test.PMock (any, fun, mock, verifySequence, (:>), hasBeenCalledInOrder)
+import Test.Spec (Spec, describe, it)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "verify exactly sequential order" do
+      m <- mock $ any :> unit
+      let
+        -- function call 3 times.
+        _ = fun m "a"
+        _ = fun m "b"
+        _ = fun m "c"
+
+      -- verify OK
+      verifySequence m [
+        "a",
+        "b",
+        "c"
+      ]
+
+      -- Another way to write this is
+      m `hasBeenCalledInOrder` [
+        "a",
+        "b",
+        "c"
+      ]
+```
+If the verification fails, you will know the order of the calls that failed to verification and the expected and actual values at that order.
+
+For example, suppose the expected value in the above example is as follows.
+```haskell
+verifySequence m [
+  "b",
+  "c",
+  "a"
+]
+```
+Then the verification fails and the following message appears.
+<pre style="color: #D2706E">
+Function was not called with expected order.
+expected 1st call: "b"
+but was  1st call: "a"
+expected 2nd call: "c"
+but was  2nd call: "b"
+expected 3rd call: "a"
+but was  3rd call: "c"
+</pre>
+### Partial call order valification
+`verifyPartiallySequence` verifies that the functions were called in a specific order.
+
+Unlike `verifySequence`, it is not necessary that all calls match exactly. As long as the order matches, the verification succeeds. For example, the following will verify that the calls were made in the order `"a"`,`"c"`.
+```haskell
+import Prelude
+
+import Test.PMock (any, fun, mock, verifyPartiallySequence, (:>), hasBeenCalledInPartialOrder)
+import Test.Spec (Spec, describe, it)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "verify partially sequential order" do
+      m <- mock $ any :> unit
+      let
+        _ = fun m "a"
+        _ = fun m "b"
+        _ = fun m "c"
+
+      verifyPartiallySequence m [
+        "a",
+        "c"
+      ]
+
+      -- Another way to write this is
+      m `hasBeenCalledInPartialOrder` [
+        "a",
+        "c"
+      ]
+```
+If the verification fails, the expected calling order and the actual calling order are all displayed.
+For example, suppose in the above example the expected values are as follows.
+```haskell
+verifySequence m [
+  "c",
+  "a"
+]
+```
+Then the verification fails and the following message appears.
+<pre style="color: #D2706E" >
+Function was not called with expected order.
+expected order:
+  "c"
+  "a"
+actual order:
+  "a"
+  "b"
+  "c"
+</pre>
+
+## Matcher
+Matchers allow flexibility in setting and verifying expected arguments.
+By default, a matcher is used to verify that the values are identical, but you can specify a matcher that accepts arbitrary values, for example
+```haskell
+import Prelude
+
+import Test.PMock (any, fun, mock, (:>))
+import Test.Spec (Spec, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  it "any match example" do
+    m <- mock $ any :> 2023 :> false      
+    fun m "Title1"  2023 `shouldEqual` false -- OK
+    fun m "Another" 2023 `shouldEqual` false -- OK
+    fun m ""        2023 `shouldEqual` false -- OK
+```
+`any` allows the built-in matcher to accept arbitrary values.
+
+This matcher can also be used for verify.
+```haskell
+import Prelude
+
+import Test.PMock (Param, any, mock, verifyCount, (:>))
+import Test.Spec (Spec, it)
+
+spec :: Spec Unit
+spec = do
+  it "any match example" do
+    m <- mock $ "Title" :> 2023 :> false
+      
+    verifyCount m 0 $ (any :: Param String) :> (any :: Param Int)
+
+    -- In PureScript v0.15.10 or later, you can write.
+    -- verifyCount m 0 $ any @String :> any @Int
+```
+This verifies that the function has never been called with any value combination.
+Annotated to make the type explicit.
+
+### Custom Matcher
+Can also define your own matchers by using the `matcher` function.
+The following is an example of a matcher that allows integer values greater than 2020.
+```haskell
+import Prelude
+
+import Test.PMock (fun, matcher, mock, (:>))
+import Test.Spec (Spec, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  it "any match example" do
+    m <- mock $ "Title" :> matcher (\v -> v >= 2020) ">= 2020" :> false
+      
+    fun m "Title" 2020 `shouldEqual` false -- OK
+    fun m "Title" 2021 `shouldEqual` false -- OK
+    fun m "Title" 2022 `shouldEqual` false -- OK
+    fun m "Title" 2023 `shouldEqual` false -- OK
+```
+The matcher takes two arguments, the first defined as `forall a. (a -> Boolean)`.
+
+The second argument is the message to be displayed if the first function returns false.
+
+This matcher can also be used for verify.
+```haskell
+import Prelude
+
+import Test.PMock (VerifyMatchType(..), any, fun, matcher, mock, verify, (:>))
+import Test.Spec (Spec, it)
+
+spec :: Spec Unit
+spec = do
+  it "any match example" do
+    m <- mock $ "Title" :> any :> false
+    let
+      _ = fun m "Title" 2020
+      _ = fun m "Title" 2001
+    verify m $ MatchAll $ "Title" :> matcher (\v -> v > 2000) "> 2000"
+```
+If multiple calls to a function are expected, use `MatchAll` to verify that all calls were made with the expected values.
+By default, verify will succeed if any one of the multiple calls is called with the expected value.
+
+If you do not use any matcher, such as `mock $ "Name" :> 100`, you would not need to use `MatchAll` because you would not verify anything but the exact matching input.
+
+### Other Built-in Matchers
+The `or` allows any of several values, as in the following example.
+```haskell
+import Prelude
+
+import Test.PMock (fun, hasBeenCalledWith, mock, or, (:>))
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "OR Matcher test" do
+      m <- mock $ 1 `or` 2 `or` 3 :> "OK"
+
+      fun m 1 `shouldEqual` "OK"
+      fun m 2 `shouldEqual` "OK"
+      fun m 3 `shouldEqual` "OK"
+
+      m `hasBeenCalledWith` 1
+      m `hasBeenCalledWith` 2
+      m `hasBeenCalledWith` 3
+```
+
+`and` can return a value only if multiple conditions are met, as follows
+```haskell
+import Prelude
+
+import Test.PMock (fun, hasBeenCalledWith, matcher, mock, (:>))
+import Test.PMock.Param (and)
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "AND Matcher test" do
+      m <- mock $ matcher (0 < _) "0 < x" `and` matcher (_ < 3) "x < 3" :> "OK"
+
+      fun m 1 `shouldEqual` "OK"
+      fun m 2 `shouldEqual` "OK"
+
+      m `hasBeenCalledWith` 1
+      m `hasBeenCalledWith` 2
+```
+You can use `notEqual` to invert the condition as follows.
+
+If a value is specified, it will be accepted other that value.
+```haskell
+import Prelude
+
+import Test.PMock (fun, mock, notEqual, (:>))
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "Not Matcher test" do
+      m <- mock $ notEqual 5 :> "OK"
+
+      fun m 4 `shouldEqual` "OK"
+      fun m 6 `shouldEqual` "OK"
+```
+It can be combined with other `Matchers`.
+```haskell
+import Prelude
+
+import Test.PMock (fun, mock, notEqual, or, (:>))
+import Test.Spec (Spec, describe, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  describe "Example Spec" do
+    it "Not Matcher test" do
+      m <- mock $ notEqual (4 `or` 5) :> "OK"
+
+      fun m 3 `shouldEqual` "OK"
+      fun m 6 `shouldEqual` "OK"
+```
+
+## Mocking an Effect action
+
+An argument-free port such as `Effect a` can be mocked directly. The call is
+recorded when the `Effect` is executed, not when it is created or extracted
+with `fun`.
+
+```haskell
+import Prelude
+
+import Effect (Effect)
+import Test.PMock (fun, hasBeenRunTimes, mock)
+
+main :: Effect Unit
+main = do
+  loadProgress <- mock (pure [ 1, 2, 3 ] :: Effect (Array Int))
+  let action = fun loadProgress
+
+  loadProgress `hasBeenRunTimes` 0
+  progress <- action
+  loadProgress `hasBeenRunTimes` 1
+```
+
+Use this form for an actual `Effect a` port. The existing
+`unit :> effect` form continues to represent a `Unit -> Effect a` function.
+
+## Multi Mock
+Sometimes you may want to change the value returned depending on the arguments passed.
+In such cases, multimocking can be used.
+
+Usage is simple, just pass an array of parameters to the mock function.
+```haskell
+import Prelude
+
+import Test.PMock (fun, hasBeenCalledWith, mock, (:>))
+import Test.Spec (Spec, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  it "multi mock example" do
+    m <- mock $ [
+      "Aja" :> 1977,
+      "Gaucho" :> 1980,
+      "The Royal Scam" :> 1976
+    ]
+
+    fun m "Aja" `shouldEqual` 1977
+    fun m "Gaucho" `shouldEqual` 1980
+    fun m "The Royal Scam" `shouldEqual` 1976
+
+    m `hasBeenCalledWith` "Aja"
+    m `hasBeenCalledWith` "Gaucho"
+    m `hasBeenCalledWith` "The Royal Scam"
+```
+
+## Sequential responses
+
+`mockSequence` returns successive configured values when the same arguments
+are used repeatedly. Response positions are tracked independently for each
+argument combination. After the last matching value, the last value is
+returned again.
+
+```haskell
+m <- mockSequence
+  [ "same" :> 1
+  , "same" :> 2
+  ]
+
+fun m "same" `shouldEqual` 1
+fun m "same" `shouldEqual` 2
+fun m "same" `shouldEqual` 2
+```
+
+Argument-free Effect actions can also return successive results.
+
+```haskell
+loadProgress <- mockSequence
+  [ pure emptyProgress
+  , pure updatedProgress
+  ]
+
+first <- fun loadProgress
+second <- fun loadProgress
+
+loadProgress `hasBeenRunTimes` 2
+```
+
+Use `namedMockSequence` when the mock name should be included in failure
+messages. The behavior of the existing `mock [ ... ]` Multi Mock is unchanged:
+it dispatches by arguments and selects the first matching definition.
+
+## About runtime errors
+If the test is called with arguments other than those set, the test is aborted and the expected arguments and the arguments actually used in the call are printed as a message.
+```haskell
+import Prelude
+
+import Test.PMock (fun, mock, (:>))
+import Test.Spec (Spec, it)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  it "throw runtime error example" do
+    m <- mock $ "Aja" :> 1977
+    fun m "Asia" `shouldEqual` 1977
+```
+<pre style="color: #D2706E">
+Error: Function was not called with expected arguments.
+  expected: "Aja"
+  but was : "Asia"
+    at Module.error (file:///home/source/purescript-pmock/output/Effect.Exception/foreign.js:6:10)
+    at Module.$$throw (file:///home/source/purescript-pmock/output/Effect.Exception/index.js:16:45)
+    at error (file:///home/source/purescript-pmock/output/Test.PMock/index.js:208:71)
+    at file:///home/source/purescript-pmock/output/Test.PMock/index.js:241:24
+    at file:///home/source/purescript-pmock/output/Test.PMock/index.js:253:53
+    at file:///home/source/purescript-pmock/output/Test.PMock/index.js:271:74
+    at file:///home/source/purescript-pmock/output/Test.PMock/index.js:337:75
+    at file:///home/source/purescript-pmock/output/Test.ExampleSpec/index.js:11:122
+    at file:///home/source/purescript-pmock/output/Test.ExampleSpec/index.js:12:3
+    at ModuleJob.run (node:internal/modules/esm/module_job:175:25)
+[error] Tests failed: exit code: 1
+</pre>
+For simple tests, it may be easy to read the message and find the failed test, but if there are multiple mocks with similar argument settings, detection may be difficult.
+
+In that case, if you are using `purescript-spec`, you can use `mockIt` instead of `it`.
+This is a wrapper function for the existing it function, and replacing it with it will allow you to catch runtime errors.
+```haskell
+import Prelude
+
+import Test.PMock (fun, mock, (:>))
+import Test.PMockSpecs (mockIt)
+import Test.Spec (Spec)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  mockIt "catch runtime error example" \_ -> do
+    m <- mock $ "Aja" :> 1977
+    fun m "Asia" `shouldEqual` 1977
+```
+<pre style="color: #D2706E">
+✗ catch runtime error example:
+
+Error: Function was not called with expected arguments.
+expected: "Aja"
+but was : "Asia"
+</pre>
+The `Test.PMockSpecs` module defines `it` as an alias for `mockIt`, so use this one if you prefer.
+```haskell
+import Prelude
+
+import Test.PMock (fun, mock, (:>))
+import Test.PMockSpecs (it)
+import Test.Spec (Spec)
+import Test.Spec.Assertions (shouldEqual)
+
+spec :: Spec Unit
+spec = do
+  it "catch runtime error example" \_ -> do
+    m <- mock $ "Aja" :> 1977
+    fun m "Asia" `shouldEqual` 1977
+```
+
+## Constraints
+* Only instances of eq and show are currently allowed as mock arguments.
+* Function arity is not capped; argument chains are handled recursively.

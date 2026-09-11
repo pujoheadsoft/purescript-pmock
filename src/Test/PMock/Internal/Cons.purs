@@ -1,4 +1,4 @@
-module Test.PMock.Cons 
+module Test.PMock.Internal.Cons
   ( Cons(..)
   , (#>)
   , type (#>)

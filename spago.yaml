@@ -2,7 +2,7 @@ package:
   name: pmock
   description: PureScript Mock
   publish:
-    version: 0.10.2
+    version: 1.0.0
     license: MIT
     location:
       githubOwner: pujoheadsoft
@@ -17,16 +17,16 @@ package:
     - maybe: ">=6.0.0 <7.0.0"
     - partial: ">=4.0.0 <5.0.0"
     - prelude: ">=6.0.1 <7.0.0"
-    - spec: ">=7.5.5 <8.0.0"
+    - spec: ">=7.5.5 <9.0.0"
     - strings: ">=6.0.1 <7.0.0"
     - transformers: ">=6.0.0 <7.0.0"
-    - unsafe-coerce: ">=6.0.0 <7.0.0"
   test:
     main: Test.Main
     dependencies:
-      - aff: ">=7.1.0 <8.0.0"
+      - aff: ">=7.1.0 <9.0.0"
+      - identity: ">=6.0.0 <7.0.0"
 
 workspace:
   packageSet:
-    registry: 46.0.2
+    registry: 80.9.0
   extraPackages: {}
