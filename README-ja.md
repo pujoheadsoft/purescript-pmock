@@ -290,7 +290,8 @@ findYear `shouldBeCalled` "Aja"
 
 ### 期待値を先に宣言する
 
-期待値をMockの定義と一緒に宣言する場合は、`withMock`と`expects`を使用します。  
+Mockの検証には、期待値を先に宣言する方法と、実行後に検証する方法があります。  
+期待値を先に宣言する場合は、`withMock`と`expects`を使用します。  
 `expects`は必ず`withMock`の内側で使用します。  
 `withMock`を抜けるときに、登録された期待値が検証されます。
 
@@ -403,7 +404,8 @@ mockFn `shouldBeCalled` once
 -- wrapped `shouldBeCalled` once -- 検証できません
 ```
 
-元のMock関数を保持しない場合は、ラップする前に`withMock`と`expects`で期待値を宣言してください。
+ラップした関数は、元のMockと同じものとして事後検証できません。  
+ラップして使用する場合も、元のMock関数を保持して事後検証するか、`withMock`と`expects`による事前宣言方式を使用してください。
 
 総呼び出し回数だけを検証する場合、引数を指定する必要はありません。  
 `with`で引数を指定した場合は、その引数に一致した呼び出しだけを数えます。

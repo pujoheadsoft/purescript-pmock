@@ -307,9 +307,10 @@ findYear `shouldBeCalled` "Aja"
 
 ### Declaring expectations first
 
-Use `withMock` and `expects` to declare expectations alongside a mock and
-verify them automatically when the scope exits. Registered expectations are
-checked when `withMock` exits. `expects` must be used inside `withMock`.
+There are two ways to verify a mock: declare expectations before execution, or
+verify calls after execution. Use `withMock` and `expects` to declare
+expectations first. Registered expectations are checked automatically when
+`withMock` exits. `expects` must be used inside `withMock`.
 
 ```purescript
 import Effect.Class (liftEffect)
@@ -424,8 +425,10 @@ mockFn `shouldBeCalled` once
 -- wrapped `shouldBeCalled` once -- Cannot be verified
 ```
 
-If the original mock function will not be retained, declare its expectations
-with `withMock` and `expects` before wrapping it.
+A wrapped function cannot be identified as the original mock during post-hoc
+verification. When wrapping a mock, either retain the original mock function
+for post-hoc verification or use `withMock` and `expects` to declare its
+expectations first.
 
 Arguments are not required when only the total number of calls matters. When
 arguments are supplied with `with`, only matching calls are counted.
