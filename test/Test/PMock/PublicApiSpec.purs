@@ -211,7 +211,7 @@ publicApiSpec = describe "Public API" do
 
   it "defines sequential responses with the cases DSL" do
     find <- mock do
-      onCase $ ("Aja" :> 1977)
+      onCase $ "Aja" :> 1977
         `andThen` 1978
 
     find "Aja" `shouldEqual` 1977
@@ -220,7 +220,7 @@ publicApiSpec = describe "Public API" do
 
   it "uses only the first matching mock case" do
     find <- mock do
-      onCase $ (any @String :> 1977)
+      onCase $ any @String :> 1977
         `andThen` 1979
       onCase $ "Aja" :> 1978
 
@@ -231,10 +231,10 @@ publicApiSpec = describe "Public API" do
   it "tracks sequential responses independently for each selected case" do
     let positive = matcher (\(Opaque n) -> n > 0) "positive opaque" :: Param Opaque
     check <- mock do
-      onCase $ (positive :> 1)
+      onCase $ positive :> 1
         `andThen` 2
         `andThen` 3
-      onCase $ (any @Opaque :> 10)
+      onCase $ any @Opaque :> 10
         `andThen` 20
 
     check (Opaque 1) `shouldEqual` 1
@@ -254,9 +254,9 @@ publicApiSpec = describe "Public API" do
 
   it "keeps distinct cases independent" do
     find <- mock do
-      onCase $ ("Aja" :> 1977)
+      onCase $ "Aja" :> 1977
         `andThen` 1978
-      onCase $ ("Gaucho" :> 1980)
+      onCase $ "Gaucho" :> 1980
         `andThen` 1981
 
     find "Aja" `shouldEqual` 1977
@@ -266,7 +266,7 @@ publicApiSpec = describe "Public API" do
 
   it "supports sequential responses for functions with multiple arguments" do
     find <- mock do
-      onCase $ ("Aja" :> 1977 :> "first")
+      onCase $ "Aja" :> 1977 :> "first"
         `andThen` "second"
 
     find "Aja" 1977 `shouldEqual` "first"
@@ -275,7 +275,7 @@ publicApiSpec = describe "Public API" do
 
   it "does not require Eq or Show for sequential return values" do
     next <- mock do
-      onCase $ (unit :> Opaque 1)
+      onCase $ unit :> Opaque 1
         `andThen` Opaque 2
 
     case next unit of
@@ -285,7 +285,7 @@ publicApiSpec = describe "Public API" do
 
   it "supports labeled sequential responses" do
     find <- mock (label "albumYear") do
-      onCase $ ("Aja" :> 1977)
+      onCase $ "Aja" :> 1977
         `andThen` 1978
 
     find "Aja" `shouldEqual` 1977

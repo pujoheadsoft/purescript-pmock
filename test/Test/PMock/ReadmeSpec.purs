@@ -144,7 +144,7 @@ readmeSpec = describe "README examples" do
 
   it "defines sequential responses with andThen" do
     next <- mock do
-      onCase $ (unit :> 1)
+      onCase $ unit :> 1
         `andThen` 2
 
     next unit `shouldEqual` 1
@@ -154,9 +154,9 @@ readmeSpec = describe "README examples" do
 
   it "keeps sequential responses on the selected case" do
     next <- mock do
-      onCase $ ("A" :> 1)
+      onCase $ "A" :> 1
         `andThen` 2
-      onCase $ (any @String :> 10)
+      onCase $ any @String :> 10
         `andThen` 20
 
     next "A" `shouldEqual` 1

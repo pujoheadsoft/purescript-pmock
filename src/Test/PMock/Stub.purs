@@ -3,8 +3,7 @@ module Test.PMock.Stub
   ) where
 
 import Test.PMock.Internal.Stub
-  ( Case
-  , Cases
+  ( Cases
   , class AndThen
   , andThen
   , class OnCase

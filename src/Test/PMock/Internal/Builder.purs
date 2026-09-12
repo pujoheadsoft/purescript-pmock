@@ -19,7 +19,7 @@ module Test.PMock.Internal.Builder
 
 import Prelude
 
-import Data.Array (filter, find, findIndex, length, mapMaybe, (!!))
+import Data.Array (filter, find, findIndex, length, (!!))
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Effect.Class (class MonadEffect, liftEffect)
@@ -38,7 +38,14 @@ import Test.PMock.Internal.Param
   )
 import Test.PMock.Internal.ParamDivider (class ParamDivider, class ReturnValue, args, returnValue)
 import Test.PMock.Internal.Registry (registerRecorder)
-import Test.PMock.Internal.Stub (Cases, caseValues)
+import Test.PMock.Internal.Stub
+  ( Cases
+  , Responses
+  , class ReturnResponses
+  , caseValues
+  , responseValues
+  , returnResponses
+  )
 import Test.PMock.Internal.Types (CalledParamsList, Label(..), Mock(..), MockName, Verifier(..))
 
 newtype MockCreation fun params = MockCreation (Effect (Mock fun params))
@@ -171,22 +178,33 @@ instance instanceMockArrayArgs ::
     createMock name s.calledParamsList
       (curryArgs (\inputParams -> findReturnValueWithStore name params inputParams s))
 
-instance instanceMockCasesEffect ::
-  MockBuilder (Cases (Effect r) Unit) (Effect r) (Param Unit) where
+instance instanceMockCasesResponsesEffect ::
+  MockBuilder (Cases (Responses (Effect r)) Unit) (Effect r) (Param Unit) where
   build name definitions = do
     s <- store
     createMock name s.calledParamsList do
       s.store (p unit)
       let callIndex = length s.calledParamsList - 1
       case caseValues definitions !! 0 of
-        Just responses -> case responses !! min callIndex (length responses - 1) of
+        Just responses -> case responseValues responses !!
+          min callIndex (length (responseValues responses) - 1) of
           Just returned -> returned
           Nothing -> throw $ "function" <> mockNameLabel name <> "has no return values."
         Nothing -> throw $ "function" <> mockNameLabel name <> "has no return values."
 
+else instance instanceMockCasesEffect ::
+  MockBuilder (Cases (Effect r) Unit) (Effect r) (Param Unit) where
+  build name definitions = do
+    s <- store
+    createMock name s.calledParamsList do
+      s.store (p unit)
+      case caseValues definitions !! 0 of
+        Just returned -> returned
+        Nothing -> throw $ "function" <> mockNameLabel name <> "has no return values."
+
 else instance instanceMockCases ::
   ( ParamDivider (Param a #> tail) args result
-  , ReturnValue result r
+  , ReturnResponses result r
   , CurryArgs args r fun
   , MatchParams args
   ) => MockBuilder (Cases (Param a #> tail) Unit) fun args where
@@ -294,18 +312,16 @@ findSequentialReturnValueWithStore name paramsList inputParams s =
 findCaseReturnValueWithStore :: forall params args result r.
      MatchParams args
   => ParamDivider params args result
-  => ReturnValue result r
+  => ReturnResponses result r
   => Maybe MockName
-  -> Array (Array params)
+  -> Array params
   -> args
   -> CalledParamsStore args
   -> r
 findCaseReturnValueWithStore name caseList inputParams s =
   let
     selectedCaseIndex actual = findIndex
-      (\responses -> case responses !! 0 of
-        Just params -> matchesParams (args params) actual
-        Nothing -> false)
+      (\params -> matchesParams (args params) actual)
       caseList
     selectedIndex = selectedCaseIndex inputParams
     callIndex = case selectedIndex of
@@ -314,10 +330,11 @@ findCaseReturnValueWithStore name caseList inputParams s =
       Nothing -> 0
     _ = storeCalledParams s inputParams
     selected = selectedIndex >>= \index -> caseList !! index
-      >>= \responses -> responses !! min callIndex (length responses - 1)
-    expectedArgs = mapMaybe (_ !! 0) caseList <#> args
-  in case selected of
-    Just params -> returnValue params
+    responses = selected <#> returnResponses
+    response = responses >>= \values -> values !! min callIndex (length values - 1)
+    expectedArgs = args <$> caseList
+  in case response of
+    Just value -> value
     Nothing -> error $ messageForMultiMockFromRendered name
       (renderExpectedParams <$> expectedArgs)
       (renderActualForExpectedList expectedArgs inputParams)

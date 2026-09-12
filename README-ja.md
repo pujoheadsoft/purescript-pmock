@@ -33,7 +33,7 @@ PMockは、引数やレコードを通して注入される関数または`Effec
 
 ## 特徴
 
-- プロダクションコードにPMock専用の型を持ち込まず、同じ関数型または`Effect`型で依存を差し替えられます。
+- コードにPMock専用の型を持ち込まず、同じ関数型または`Effect`型で依存を差し替えられます。
 - 型の付いた入力ケース、`any`、述語Matcherを使用できます。
 - 一つのMockに対する呼び出し回数、引数、順序を検証できます。
 - 呼び出しごとに戻り値を変える逐次応答を定義できます。
@@ -76,7 +76,7 @@ CIでは、次の組み合わせでビルドとテストを実行しています
 
 ## Quick Start
 
-例えば、プロダクションコードがレコードで依存を受け取る場合は、次のようにテストできます。
+例えば、レコードで依存を受け取るケースの場合は、次のようにテストできます。
 
 ```purescript
 module Test.AlbumSpec (spec) where
@@ -493,7 +493,7 @@ load `shouldBeCalled` once
 
 ```purescript
 next <- mock do
-  onCase $ (unit :> 1)
+  onCase $ unit :> 1
     `andThen` 2
 
 next unit -- 1
@@ -506,10 +506,10 @@ next unit -- 2
 
 ```purescript
 next <- mock do
-  onCase $ ("A" :> 1)
+  onCase $ "A" :> 1
     `andThen` 2
     `andThen` 3
-  onCase $ (any @String :> 9)
+  onCase $ any @String :> 9
     `andThen` 10
     `andThen` 11
 

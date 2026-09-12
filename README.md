@@ -520,7 +520,7 @@ After the final value, the final value is returned again.
 
 ```purescript
 next <- mock do
-  onCase $ (unit :> 1)
+  onCase $ unit :> 1
     `andThen` 2
 
 next unit -- 1
@@ -534,10 +534,10 @@ only by calls that select that case.
 
 ```purescript
 next <- mock do
-  onCase $ ("A" :> 1)
+  onCase $ "A" :> 1
     `andThen` 2
     `andThen` 3
-  onCase $ (any @String :> 9)
+  onCase $ any @String :> 9
     `andThen` 10
     `andThen` 11
 
