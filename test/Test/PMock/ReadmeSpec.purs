@@ -9,6 +9,7 @@ import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Test.PMock
   ( Param
+  , andThen
   , any
   , called
   , calledWith
@@ -141,24 +142,27 @@ readmeSpec = describe "README examples" do
 
     result `shouldEqual` Just article
 
-  it "defines sequential responses with onCase" do
+  it "defines sequential responses with andThen" do
     next <- mock do
-      onCase $ unit :> 1
-      onCase $ unit :> 2
+      onCase $ (unit :> 1)
+        `andThen` 2
 
     next unit `shouldEqual` 1
     next unit `shouldEqual` 2
     next unit `shouldEqual` 2
     next `shouldBeCalled` times 3
 
-  it "shares a sequential response across calls matching the same cases" do
+  it "keeps sequential responses on the selected case" do
     next <- mock do
-      onCase $ any @String :> 1
-      onCase $ any @String :> 2
+      onCase $ ("A" :> 1)
+        `andThen` 2
+      onCase $ (any @String :> 10)
+        `andThen` 20
 
     next "A" `shouldEqual` 1
-    next "B" `shouldEqual` 2
+    next "B" `shouldEqual` 10
     next "A" `shouldEqual` 2
+    next "C" `shouldEqual` 20
 
   it "uses the first matching definition in a Multi Mock" do
     firstMatch <- mock

@@ -14,7 +14,7 @@ PMock 0.10以前の使い方は、[旧版の日本語README](docs/README-v0.10-j
 PMockでは、入力と戻り値を指定するだけで、差し替える依存と同じ関数型を持つStubを作ることができます。  
 まずStubで十分かを考え、呼び出しの検証や逐次応答が必要な場合だけMockを使用します。  
 複数ケースやMatcherを型付きDSLで定義できます。  
-StubとMockでは同じ入力DSLを使用できますが、複数の`onCase`が一致した場合の選択規則は異なります。  
+StubとMockでは同じ入力DSLを使用し、`onCase`で入力による分岐、`andThen`でMockの逐次応答を定義します。
 単一の値を返すだけの手書きStubと比べ、受け付ける入力を明示し、想定外の入力では差分を含むメッセージを表示できます。  
 Mockの検証に失敗した場合も、原因を調べるための詳しいメッセージを表示します。
 
@@ -29,7 +29,7 @@ PMockは、引数やレコードを通して注入される関数または`Effec
 | | 入力の照合 | 呼び出し履歴 |
 | --- | --- | --- |
 | Stub | 入力を照合して戻り値を選ぶ | 記録しない |
-| Mock | 同じ入力DSLを使うが、定義形式によって複数ケースの選択規則が異なる | 記録し、一つのMock内の回数、引数、順序を検証できる |
+| Mock | `onCase`は最初に一致したcaseを選び、`andThen`は選ばれたcaseの逐次応答を進める | 記録し、一つのMock内の回数、引数、順序を検証できる |
 
 ## 特徴
 
@@ -488,55 +488,58 @@ load `shouldBeCalled` once
 
 ### 戻り値を順番に返す
 
-同じ引数に対して`onCase`を複数指定すると、呼び出しごとに戻り値が変わります。  
+一つのcaseへ`andThen`で応答を追加すると、呼び出しごとに戻り値が変わります。
 最後の値まで到達した後は、最後の値を繰り返し返します。
 
 ```purescript
 next <- mock do
-  onCase $ unit :> 1
-  onCase $ unit :> 2
+  onCase $ (unit :> 1)
+    `andThen` 2
 
 next unit -- 1
 next unit -- 2
 next unit -- 2
 ```
 
-逐次応答の現在位置は、同じ`onCase`の集合に一致する呼び出しで共有されます。  
-例えば、次のMockは引数に関係なく、最初の呼び出しで`1`を返し、二回目以降は`2`を返します。
+`onCase`は上から順に照合され、最初に一致したcaseだけが選ばれます。
+各caseは独立した応答位置を持ち、そのcaseを選んだ呼び出しだけが位置を進めます。
 
 ```purescript
 next <- mock do
-  onCase $ any @String :> 1
-  onCase $ any @String :> 2
+  onCase $ ("A" :> 1)
+    `andThen` 2
+    `andThen` 3
+  onCase $ (any @String :> 9)
+    `andThen` 10
+    `andThen` 11
 
 next "A" -- 1
-next "B" -- 2
+next "B" -- 9
 next "A" -- 2
+next "C" -- 10
 ```
 
-具体値などによって一致する`onCase`の集合が異なる場合は、それぞれの逐次応答が独立して進みます。
+`"A"`の呼び出しは最初のcaseだけを進め、`"B"`と`"C"`は同じ`any` caseを進めます。
+この規則では実引数同士を比較しないため、`Eq`を持たない型のMatcherでも逐次応答を利用できます。
 
-Mockでは、入力に一致するすべての`onCase`が連続応答の候補になります。  
-`any`と具体値のようにMatcherが重複する場合、具体値の呼び出しには両方が一致し、定義順に戻り値が選ばれます。  
-常に最初に一致した値を返すMulti Mockとして使う場合は、配列形式の`mock [ ... ]`を使用してください。
+後ろにある重複caseには到達しません。同じ条件で値を順番に返す場合は、一つのcaseへ`andThen`で応答を追加してください。
 
 ```purescript
-firstMatch <- mock
-  [ any @String :> 1
-  , "A" :> 2
-  ]
+firstMatch <- mock do
+  onCase $ any @String :> 1
+  onCase $ "A" :> 2
 
 firstMatch "A" -- 1
 firstMatch "A" -- 1
 ```
 
-Stub、逐次応答を行うMock、Multi Mockの違いは次のとおりです。
+入力による分岐を`onCase`、選ばれたcaseの時間的な変化を`andThen`で記述します。
 
 | 定義方法 | 複数の定義が一致した場合 |
 | --- | --- |
-| `stub do onCase ...` | 上から最初に一致した定義を常に使用する |
-| `mock do onCase ...` | 一致した定義を逐次応答として定義順に使用する |
-| `mock [ ... ]` | 上から最初に一致した定義を常に使用する |
+| `stub do onCase ...` | 上から最初に一致したcaseを常に使用する |
+| `mock do onCase ...` | 上から最初に一致したcaseを使用し、そのcaseの`andThen`を順に進める |
+| `mock [ ... ]` | 上から最初に一致した定義を常に使用する（従来のMulti Mock） |
 
 ### 名前を付ける
 
@@ -630,8 +633,8 @@ PMock 1.0では、StubとMockの役割を分け、PMock専用のハンドルを�
 | `fun mock` | `mock`が返した関数 | `fun`による取り出しは不要 |
 | `namedMockFun name definition` | `stub (label name) definition` | 名前は`label`で指定する |
 | `namedMock name definition` | `mock (label name) definition` | 名前は`label`で指定する |
-| `mockSequence definitions` | `mock do onCase ...` | 同じ引数の`onCase`を順番に返す |
-| `namedMockSequence name definitions` | `mock (label name) do onCase ...` | `label`と`onCase`を組み合わせる |
+| `mockSequence definitions` | ``mock do onCase $ definition `andThen` response`` | 一つのcaseへ逐次応答を追加する |
+| `namedMockSequence name definitions` | ``mock (label name) do onCase $ definition `andThen` response`` | `label`、`onCase`、`andThen`を組み合わせる |
 | `mock [ definition1, definition2 ]` | `mock [ definition1, definition2 ]` | 従来のMulti Mockと同じく、最初に一致した定義を使用する |
 | `verify mock arguments` | ``mock `shouldBeCalled` arguments`` | 指定した引数で1回以上呼ばれたことを検証する |
 | ``mock `hasBeenCalledWith` arguments`` | ``mock `shouldBeCalled` arguments`` | 同上 |

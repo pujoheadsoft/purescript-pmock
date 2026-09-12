@@ -4,6 +4,12 @@ module Test.PMock.Internal.Stub
   , buildStub
   , stub
   , Cases
+  , Case
+  , class AndThen
+  , andThen
+  , class OnCase
+  , class ReplaceReturn
+  , replaceReturn
   , onCase
   , cases
   , caseValues
@@ -11,20 +17,22 @@ module Test.PMock.Internal.Stub
 
 import Prelude
 
-import Data.Array (find, (!!))
+import Data.Array (find, mapMaybe, (!!))
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Effect.Exception (throw)
 import Effect.Unsafe (unsafePerformEffect)
-import Test.PMock.Internal.Cons (type (#>))
+import Test.PMock.Internal.Cons (type (#>), (#>))
 import Test.PMock.Internal.CurryArgs (class CurryArgs, curryArgs)
 import Test.PMock.Internal.Message (messageForMultiMockFromRendered, messageFromRendered)
 import Test.PMock.Internal.Param
   ( class MatchParams
   , Param
   , matchesParams
+  , param
   , renderActualParams
   , renderExpectedParams
+  , Result(..)
   )
 import Test.PMock.Internal.ParamDivider
   ( class ParamDivider
@@ -37,8 +45,10 @@ import Test.PMock.Internal.Types (Label(..), MockName)
 class StubBuilder params fun | params -> fun where
   buildStub :: Maybe MockName -> params -> fun
 
+newtype Case a = Case (Array a)
+
 newtype Cases a b = Cases
-  { values :: Array a
+  { values :: Array (Case a)
   , result :: b
   }
 
@@ -67,14 +77,54 @@ instance bindCases :: Bind (Cases a) where
 
 instance monadCases :: Monad (Cases a)
 
-onCase :: forall a. a -> Cases a Unit
-onCase value = Cases { values: [ value ], result: unit }
+class OnCase input a | input -> a where
+  onCase :: input -> Cases a Unit
+
+instance onCaseCase :: OnCase (Case a) a where
+  onCase value = Cases { values: [ value ], result: unit }
+else instance onCaseValue :: OnCase a a where
+  onCase value = Cases { values: [ Case [ value ] ], result: unit }
+
+class ReplaceReturn params r | params -> r where
+  replaceReturn :: params -> r -> params
+
+instance replaceReturnParam :: (Eq r, Show r) =>
+  ReplaceReturn (Param a #> Param r) r where
+  replaceReturn (a #> _) r = a #> param r
+else instance replaceReturnResult ::
+  ReplaceReturn (Param a #> Result r) r where
+  replaceReturn (a #> _) r = a #> Result r
+else instance replaceReturnMore ::
+  ReplaceReturn (Param b #> rest) r =>
+  ReplaceReturn (Param a #> Param b #> rest) r where
+  replaceReturn (a #> rest) r = a #> replaceReturn rest r
+
+class AndThen input response output | input -> response output where
+  andThen :: input -> response -> output
+
+instance andThenEffectCase ::
+  AndThen (Case (Effect r)) (Effect r) (Case (Effect r)) where
+  andThen (Case responses) response = Case (responses <> [ response ])
+else instance andThenCase :: ReplaceReturn params r =>
+  AndThen (Case params) r (Case params) where
+  andThen (Case responses) response = case responses !! 0 of
+    Just first -> Case (responses <> [ replaceReturn first response ])
+    Nothing -> Case []
+else instance andThenEffect ::
+  AndThen (Effect r) (Effect r) (Case (Effect r)) where
+  andThen first response = Case [ first, response ]
+else instance andThenParams :: ReplaceReturn params r =>
+  AndThen params r (Case params) where
+  andThen params response = Case [ params, replaceReturn params response ]
 
 cases :: forall a. Array a -> Cases a Unit
-cases values = Cases { values, result: unit }
+cases values = Cases { values: map (Case <<< pure) values, result: unit }
 
-caseValues :: forall a b. Cases a b -> Array a
-caseValues (Cases definition) = definition.values
+caseValues :: forall a b. Cases a b -> Array (Array a)
+caseValues (Cases definition) = caseResponses <$> definition.values
+
+caseResponses :: forall a. Case a -> Array a
+caseResponses (Case responses) = responses
 
 class StubFn input output where
   stub :: input -> output
@@ -97,7 +147,7 @@ instance stubBuilderCases ::
   , MatchParams args
   ) => StubBuilder (Cases (Param a #> tail) Unit) fun where
   buildStub name (Cases definition) = curryArgs \inputParams ->
-    let paramsList = definition.values
+    let paramsList = mapMaybe (_ !! 0) (caseResponses <$> definition.values)
     in
     case find (\params -> matchesParams (args params) inputParams) paramsList of
       Just params -> returnValue params

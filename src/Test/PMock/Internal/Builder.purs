@@ -19,7 +19,7 @@ module Test.PMock.Internal.Builder
 
 import Prelude
 
-import Data.Array (filter, find, length, (!!))
+import Data.Array (filter, find, findIndex, length, mapMaybe, (!!))
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Effect.Class (class MonadEffect, liftEffect)
@@ -173,12 +173,28 @@ instance instanceMockArrayArgs ::
 
 instance instanceMockCasesEffect ::
   MockBuilder (Cases (Effect r) Unit) (Effect r) (Param Unit) where
-  build name = buildSequence name <<< caseValues
+  build name definitions = do
+    s <- store
+    createMock name s.calledParamsList do
+      s.store (p unit)
+      let callIndex = length s.calledParamsList - 1
+      case caseValues definitions !! 0 of
+        Just responses -> case responses !! min callIndex (length responses - 1) of
+          Just returned -> returned
+          Nothing -> throw $ "function" <> mockNameLabel name <> "has no return values."
+        Nothing -> throw $ "function" <> mockNameLabel name <> "has no return values."
 
 else instance instanceMockCases ::
-  MockSequenceBuilder (Array (Param a #> tail)) fun args =>
-  MockBuilder (Cases (Param a #> tail) Unit) fun args where
-  build name = buildSequence name <<< caseValues
+  ( ParamDivider (Param a #> tail) args result
+  , ReturnValue result r
+  , CurryArgs args r fun
+  , MatchParams args
+  ) => MockBuilder (Cases (Param a #> tail) Unit) fun args where
+  build name definitions = do
+    s <- store
+    createMock name s.calledParamsList
+      (curryArgs (\inputParams -> findCaseReturnValueWithStore name
+        (caseValues definitions) inputParams s))
 
 instance instanceMockArgs ::
   ( ParamDivider (Param a #> tail) args result
@@ -269,6 +285,37 @@ findSequentialReturnValueWithStore name paramsList inputParams s =
     _ = storeCalledParams s inputParams
     selected = matchingParams !! min callIndex (length matchingParams - 1)
     expectedArgs = args <$> paramsList
+  in case selected of
+    Just params -> returnValue params
+    Nothing -> error $ messageForMultiMockFromRendered name
+      (renderExpectedParams <$> expectedArgs)
+      (renderActualForExpectedList expectedArgs inputParams)
+
+findCaseReturnValueWithStore :: forall params args result r.
+     MatchParams args
+  => ParamDivider params args result
+  => ReturnValue result r
+  => Maybe MockName
+  -> Array (Array params)
+  -> args
+  -> CalledParamsStore args
+  -> r
+findCaseReturnValueWithStore name caseList inputParams s =
+  let
+    selectedCaseIndex actual = findIndex
+      (\responses -> case responses !! 0 of
+        Just params -> matchesParams (args params) actual
+        Nothing -> false)
+      caseList
+    selectedIndex = selectedCaseIndex inputParams
+    callIndex = case selectedIndex of
+      Just index -> length $ filter (\called -> selectedCaseIndex called == Just index)
+        s.calledParamsList
+      Nothing -> 0
+    _ = storeCalledParams s inputParams
+    selected = selectedIndex >>= \index -> caseList !! index
+      >>= \responses -> responses !! min callIndex (length responses - 1)
+    expectedArgs = mapMaybe (_ !! 0) caseList <#> args
   in case selected of
     Just params -> returnValue params
     Nothing -> error $ messageForMultiMockFromRendered name

@@ -7,7 +7,7 @@ import Data.String (joinWith)
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
-import Test.PMock (Param, TimesSpec, any, anything, called, calledInPartialOrder, calledWith, expects, greaterThan, inOrderWith, inPartialOrderWith, label, lessThan, matcher, matcher_, mock, onCase, once, shouldBeCalled, times, with, withMock, (:>))
+import Test.PMock (Param, TimesSpec, andThen, any, anything, called, calledInPartialOrder, calledWith, expects, greaterThan, inOrderWith, inPartialOrderWith, label, lessThan, matcher, matcher_, mock, onCase, once, shouldBeCalled, times, with, withMock, (:>))
 import Test.PMockSpecs (expectErrorWithMessage)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
@@ -211,33 +211,36 @@ publicApiSpec = describe "Public API" do
 
   it "defines sequential responses with the cases DSL" do
     find <- mock do
-      onCase $ "Aja" :> 1977
-      onCase $ "Aja" :> 1978
+      onCase $ ("Aja" :> 1977)
+        `andThen` 1978
 
     find "Aja" `shouldEqual` 1977
     find "Aja" `shouldEqual` 1978
     find "Aja" `shouldEqual` 1978
 
-  it "uses all matching mock cases as sequential responses" do
+  it "uses only the first matching mock case" do
     find <- mock do
-      onCase $ any @String :> 1977
+      onCase $ (any @String :> 1977)
+        `andThen` 1979
       onCase $ "Aja" :> 1978
 
     find "Aja" `shouldEqual` 1977
-    find "Aja" `shouldEqual` 1978
-    find "Aja" `shouldEqual` 1978
+    find "Aja" `shouldEqual` 1979
+    find "Aja" `shouldEqual` 1979
 
-  it "tracks sequential responses by the complete set of matching cases" do
+  it "tracks sequential responses independently for each selected case" do
     let positive = matcher (\(Opaque n) -> n > 0) "positive opaque" :: Param Opaque
     check <- mock do
-      onCase $ any @Opaque :> 1
-      onCase $ any @Opaque :> 2
-      onCase $ positive :> 3
+      onCase $ (positive :> 1)
+        `andThen` 2
+        `andThen` 3
+      onCase $ (any @Opaque :> 10)
+        `andThen` 20
 
     check (Opaque 1) `shouldEqual` 1
-    check (Opaque (-1)) `shouldEqual` 1
+    check (Opaque (-1)) `shouldEqual` 10
     check (Opaque 1) `shouldEqual` 2
-    check (Opaque (-1)) `shouldEqual` 2
+    check (Opaque (-1)) `shouldEqual` 20
     check (Opaque 1) `shouldEqual` 3
 
   it "preserves Multi Mock first-match behavior for duplicate arguments" do
@@ -249,22 +252,41 @@ publicApiSpec = describe "Public API" do
     find "Aja" `shouldEqual` 1977
     find "Aja" `shouldEqual` 1977
 
-  it "keeps distinct matching case sets independent" do
+  it "keeps distinct cases independent" do
     find <- mock do
-      onCase $ "Aja" :> 1977
-      onCase $ "Gaucho" :> 1980
-      onCase $ "Aja" :> 1978
-      onCase $ "Gaucho" :> 1981
+      onCase $ ("Aja" :> 1977)
+        `andThen` 1978
+      onCase $ ("Gaucho" :> 1980)
+        `andThen` 1981
 
     find "Aja" `shouldEqual` 1977
     find "Gaucho" `shouldEqual` 1980
     find "Aja" `shouldEqual` 1978
     find "Gaucho" `shouldEqual` 1981
 
+  it "supports sequential responses for functions with multiple arguments" do
+    find <- mock do
+      onCase $ ("Aja" :> 1977 :> "first")
+        `andThen` "second"
+
+    find "Aja" 1977 `shouldEqual` "first"
+    find "Aja" 1977 `shouldEqual` "second"
+    find "Aja" 1977 `shouldEqual` "second"
+
+  it "does not require Eq or Show for sequential return values" do
+    next <- mock do
+      onCase $ (unit :> Opaque 1)
+        `andThen` Opaque 2
+
+    case next unit of
+      Opaque value -> value `shouldEqual` 1
+    case next unit of
+      Opaque value -> value `shouldEqual` 2
+
   it "supports labeled sequential responses" do
     find <- mock (label "albumYear") do
-      onCase $ "Aja" :> 1977
-      onCase $ "Aja" :> 1978
+      onCase $ ("Aja" :> 1977)
+        `andThen` 1978
 
     find "Aja" `shouldEqual` 1977
     find "Aja" `shouldEqual` 1978
@@ -298,8 +320,8 @@ publicApiSpec = describe "Public API" do
 
   it "defines sequential argument-free Effects with the cases DSL" do
     load <- mock do
-      onCase (pure "first" :: Effect String)
-      onCase (pure "second" :: Effect String)
+      onCase $ (pure "first" :: Effect String)
+        `andThen` (pure "second" :: Effect String)
 
     first <- liftEffect load
     second <- liftEffect load

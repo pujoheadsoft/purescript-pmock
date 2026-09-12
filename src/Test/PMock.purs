@@ -39,7 +39,11 @@ import Test.PMock.Param
   , (:>)
   ) as Param
 import Test.PMock.Stub
-  ( Cases
+  ( Case
+  , Cases
+  , class AndThen
+  , andThen
+  , class OnCase
   , cases
   , onCase
   , stub

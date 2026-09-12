@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Added
+
+- Added `andThen` for declaring successive responses on a single `onCase`.
+
+### Changed
+
+- Changed `mock do onCase ...` to use first-match-wins semantics. Each selected case now maintains its own response position; repeated overlapping `onCase` entries no longer form an implicit response sequence.
+
 ## [1.0.1] - 2026-09-11
 
 ### Documentation

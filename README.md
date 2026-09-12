@@ -14,12 +14,12 @@ For PMock 0.10 and earlier, see the [0.10 English README](docs/README-v0.10.md).
 PMock creates stubs from expected inputs and return values. The result has the
 same function type as the dependency it replaces. Start with a stub, and use a
 mock only when call verification or sequential responses are needed.
-Define multiple cases and matchers with a typed DSL. Stubs and mocks accept the
-same input DSL, but use different selection rules when multiple `onCase`
-entries match. Compared with a hand-written stub that simply returns one value,
-a PMock stub states its accepted inputs and can report differences for
-unexpected inputs. Detailed messages also help diagnose mock verification
-failures.
+Define multiple cases and matchers with a typed DSL. Stubs and mocks use the
+same input DSL: `onCase` defines input branches, and `andThen` defines
+successive responses for a mock case. Compared with a hand-written stub that
+simply returns one value, a PMock stub states its accepted inputs and can report
+differences for unexpected inputs. Detailed messages also help diagnose mock
+verification failures.
 
 ```text
 Stub first. Verification when needed.
@@ -515,58 +515,62 @@ load `shouldBeCalled` once
 
 ### Sequential responses
 
-Multiple `onCase` entries for the same arguments return successive values.
+Add responses to one case with `andThen` to return successive values.
 After the final value, the final value is returned again.
 
 ```purescript
 next <- mock do
-  onCase $ unit :> 1
-  onCase $ unit :> 2
+  onCase $ (unit :> 1)
+    `andThen` 2
 
 next unit -- 1
 next unit -- 2
 next unit -- 2
 ```
 
-Calls that match the same set of `onCase` entries share a response position.
-For example, this mock returns `1` for the first call and `2` for every later
-call, regardless of the argument:
+`onCase` entries are checked from top to bottom, and only the first matching
+case is selected. Each case has an independent response position, advanced
+only by calls that select that case.
 
 ```purescript
 next <- mock do
-  onCase $ any @String :> 1
-  onCase $ any @String :> 2
+  onCase $ ("A" :> 1)
+    `andThen` 2
+    `andThen` 3
+  onCase $ (any @String :> 9)
+    `andThen` 10
+    `andThen` 11
 
 next "A" -- 1
-next "B" -- 2
+next "B" -- 9
 next "A" -- 2
+next "C" -- 10
 ```
 
-When concrete values or other matchers cause calls to match different sets of
-`onCase` entries, each sequential response advances independently.
+Calls with `"A"` advance only the first case. Calls with `"B"` and `"C"`
+advance the same `any` case. Since this rule does not compare actual arguments,
+sequential responses also work with matchers for types without `Eq`.
 
-For a mock, every matching `onCase` is a candidate in the sequential response.
-When matchers overlap, such as `any` and a specific value, both cases match the
-specific value and their results are selected in definition order. Use the
-array form `mock [ ... ]` for a Multi Mock that always returns the first match.
+Later overlapping cases are unreachable. To return successive values for the
+same condition, add them to one case with `andThen`.
 
 ```purescript
-firstMatch <- mock
-  [ any @String :> 1
-  , "A" :> 2
-  ]
+firstMatch <- mock do
+  onCase $ any @String :> 1
+  onCase $ "A" :> 2
 
 firstMatch "A" -- 1
 firstMatch "A" -- 1
 ```
 
-Stubs, sequential-response mocks, and Multi Mocks differ as follows:
+Use `onCase` for input branching and `andThen` for changes over time within the
+selected case.
 
 | Definition | When multiple definitions match |
 | --- | --- |
-| `stub do onCase ...` | Always uses the first matching definition |
-| `mock do onCase ...` | Uses all matching definitions as successive responses |
-| `mock [ ... ]` | Always uses the first matching definition |
+| `stub do onCase ...` | Always uses the first matching case |
+| `mock do onCase ...` | Uses the first matching case and advances its `andThen` responses |
+| `mock [ ... ]` | Always uses the first matching definition (legacy Multi Mock) |
 
 ### Labels
 
@@ -667,8 +671,8 @@ callable without a PMock-specific handle. The main API replacements are:
 | `fun mock` | The function returned by `mock` | No extraction with `fun` is required |
 | `namedMockFun name definition` | `stub (label name) definition` | Names are specified independently with `label` |
 | `namedMock name definition` | `mock (label name) definition` | Names are specified independently with `label` |
-| `mockSequence definitions` | `mock do onCase ...` | Successive `onCase` entries for the same arguments are returned in order |
-| `namedMockSequence name definitions` | `mock (label name) do onCase ...` | Combine `label` and `onCase` |
+| `mockSequence definitions` | ``mock do onCase $ definition `andThen` response`` | Add successive responses to one case |
+| `namedMockSequence name definitions` | ``mock (label name) do onCase $ definition `andThen` response`` | Combine `label`, `onCase`, and `andThen` |
 | `mock [ definition1, definition2 ]` | `mock [ definition1, definition2 ]` | Preserves the legacy Multi Mock behavior of always using the first match |
 | `verify mock arguments` | ``mock `shouldBeCalled` arguments`` | Verifies at least one matching call |
 | ``mock `hasBeenCalledWith` arguments`` | ``mock `shouldBeCalled` arguments`` | Same as above |
